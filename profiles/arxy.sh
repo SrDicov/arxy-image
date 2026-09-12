@@ -80,10 +80,11 @@ DEBLOATED_MESA_URL='https://github.com/pkgforge-dev/archlinux-pkgs-debloated/rel
 # paru+usuario-aur. AUR llega en arxy fase 2, nunca aqui.
 AUR_PACKAGES=()
 
-# Locales minimos: ingles + espanol.
+# Locales minimos: en_US (C.UTF-8 lo genera locale-gen siempre, sin pedirlo).
+# es_ES fuera (-5MB): con un solo locale generado, UI en ingles; en_US se
+# conserva (no C solo) porque apps clase Steam lo exigen (+1MB de seguro).
 LOCALES=(
 	'en_US.UTF-8 UTF-8'
-	'es_ES.UTF-8 UTF-8'
 )
 
 # Mirrorlist mundial estatica (sin reflector: sus picks solo sirven para

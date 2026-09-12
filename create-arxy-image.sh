@@ -78,6 +78,14 @@ tidy_rootfs() { # <bootstrap>
 	# por eso esto corre al final, no en el bootstrap) -47MB.
 	find "$1/usr/lib" "$1/usr/bin" -name '*.a' -delete
 	find "$1/usr/lib" -name '*.la' -delete
+	# locales: i18n son fuentes de localedef (locale-gen futuro exigiria
+	# reinstalar glibc) -16MB; catalogos != C/en incargables (solo
+	# C.UTF-8+en_US generados) -108MB; archive 5.8->3.3MB.
+	rm -rf "${1:?}/usr/share/i18n"
+	for _l in "${1:?}/usr/share/locale/"*; do
+		_b="${_l##*/}"
+		case "$_b" in C*|en*|locale.alias) ;; *) rm -rf "$_l" ;; esac
+	done
 	# restos de build: cache/log/boot (contenido; los dirs los recrea pacman) -11MB.
 	rm -rf "${1:?}/var/cache/pacman/pkg"/* "${1:?}/var/log"/* "${1:?}/boot"/*
 }
