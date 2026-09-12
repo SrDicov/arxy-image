@@ -89,6 +89,18 @@ if [[ -n "${MATRIX_WRITE2:-}" ]]; then
 else
     echo "INFO: escrituras L2 omitidas (MATRIX_WRITE2 vacio; se prueban en CI)"
 fi
+# Semantica de rollback: .old es siempre el setup INMEDIATO anterior
+# (el swap hace rm -rf del .old previo: no hay "primero" que rescatar).
+# Se prueba con un marcador DENTRO del rootfs (el version file no sirve:
+# vive al lado del root, no dentro, y el rollback no lo toca).
+t "rollback restaura setup anterior" -- sh -c '
+    echo uno > "$ARXY_ROOT/.matrix-mark" || exit 2
+    arxy setup >/dev/null 2>&1 || exit 3
+    test ! -e "$ARXY_ROOT/.matrix-mark" || exit 4
+    arxy rollback >/dev/null 2>&1 || exit 5
+    test "$(cat "$ARXY_ROOT/.matrix-mark" 2>/dev/null)" = uno || exit 6
+    rm -f "$ARXY_ROOT/.matrix-mark"'
+t "clean --apply borra rollback" -- sh -c 'test -d "$ARXY_ROOT.old" && arxy clean --apply | grep -q "limpieza hecha" && test ! -d "$ARXY_ROOT.old"'
 
 echo "== resultado: $([[ $FAIL -eq 0 ]] && echo TODO_OK || echo "$FAIL FALLOS")"
 exit $FAIL
