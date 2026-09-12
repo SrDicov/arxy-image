@@ -38,7 +38,10 @@ ENABLE_REFLECTOR=
 
 # --- NoExtract extendido: ademas del firmware nvidia y man (defecto),
 # --- fuera docs, gtk-doc e info. Se conservan licenses y locales.
-PACMAN_NOEXTRACT='usr/lib/firmware/nvidia/* usr/share/man/* usr/share/doc/* usr/share/gtk-doc/* usr/share/info/*'
+# --- include+i18n tambien excluidos: evita que un futuro 'arxy update'
+# --- (glibc) los restaure en silencio (+76MB). Si alguien compila C dentro,
+# --- los headers vuelven con 'pacman -S glibc' tras quitar esta linea.
+PACMAN_NOEXTRACT='usr/lib/firmware/nvidia/* usr/share/man/* usr/share/doc/* usr/share/gtk-doc/* usr/share/info/* usr/include/* usr/share/i18n/*'
 
 # Paquete minimo: runtime glibc + shell usable + pacman + baseline
 # grafica/sonido/fuentes. 'filesystem' es obligatorio (provee
