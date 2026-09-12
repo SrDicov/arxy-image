@@ -86,6 +86,10 @@ tidy_rootfs() { # <bootstrap>
 		_b="${_l##*/}"
 		case "$_b" in C*|en*|locale.alias) ;; *) rm -rf "$_l" ;; esac
 	done
+	# firmware ENTERO: lo carga el kernel del host, nunca el rootfs (Mesa no
+	# toca firmware). -0MB hoy (NoExtract ya lo excluye); linea como garantia
+	# futura (el WARNING de arriba avisa si algo se cuela antes de este punto).
+	rm -rf "${1:?}/usr/lib/firmware"
 	# restos de build: cache/log/boot (contenido; los dirs los recrea pacman) -11MB.
 	rm -rf "${1:?}/var/cache/pacman/pkg"/* "${1:?}/var/log"/* "${1:?}/boot"/*
 }
