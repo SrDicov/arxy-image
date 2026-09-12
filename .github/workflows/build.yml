@@ -8,6 +8,8 @@ on:
   schedule:
     - cron: '0 4 * * 5'   # viernes 04:00 UTC
   push:
+    paths-ignore:
+      - '**/*.md'
     paths:
       - 'profiles/arxy.sh'
       - 'create-arch-bootstrap.sh'
@@ -20,8 +22,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Directriz AnyLinux: builds canonicos en Arch (pkgforge), nunca en
+    # Fedora/otras distros (rutas lib32 distintas). --privileged: el
+    # bootstrap monta proc/sys/dev para pacman+keyring.
     container:
-      image: archlinux:latest
+      image: ghcr.io/pkgforge-dev/archlinux:latest
       options: --privileged
     steps:
       - uses: actions/checkout@v4
