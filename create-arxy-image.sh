@@ -66,6 +66,23 @@ fi
 
 cd "${script_dir}" || exit 1
 
+# tidy_rootfs: quita peso muerto MEDIDO (deltas sobre 946MB pristine).
+# Orden: corre tras todas las instalaciones (los rm van ANTES de empaquetar;
+# ver Fase 2). strip: NO, Arch ya distribuye strippeado (2139 ficheros, -0MB).
+# dedup en build: NO (2MB en base; el auto-dedup de runtime lo cubre).
+tidy_rootfs() { # <bootstrap>
+	# docs/man/info: restos del tarball base (NoExtract no filtra lo
+	# preexistente) -53MB.
+	rm -rf "$1/usr/share/man" "$1/usr/share/doc" "$1/usr/share/info" "$1/usr/share/gtk-doc"
+	# estaticos: AUR -bin no compila (reaparecen si glibc se reinstala:
+	# por eso esto corre al final, no en el bootstrap) -47MB.
+	find "$1/usr/lib" "$1/usr/bin" -name '*.a' -delete
+	find "$1/usr/lib" -name '*.la' -delete
+	# restos de build: cache/log/boot (contenido; los dirs los recrea pacman) -11MB.
+	rm -rf "${1:?}/var/cache/pacman/pkg"/* "${1:?}/var/log"/* "${1:?}/boot"/*
+}
+tidy_rootfs "${bootstrap}"
+
 echo "Packing ${tarball}..."
 # Nodos /dev estaticos dentro de la imagen: el chroot pelado (sin mounts,
 # tipico en nivel 2) los necesita para gpg (pacman -S verifica firmas).
