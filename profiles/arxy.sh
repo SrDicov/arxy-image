@@ -66,6 +66,16 @@ PACKAGES=(
 	fontconfig ttf-dejavu
 )
 
+# mesa-mini en lugar de mesa oficial (el bootstrap lo descarga e instala con
+# -U tras PACKAGES, y saca llvm-libs huerfano). No existe repo pacman:
+# es un asset del release 'continuous'.
+# Decisiones con numero: mini sobre nano (-Os de nano arriesga estabilidad
+# en juegos/emuladores por ~11MB mas); icu se queda OFICIAL (no existe
+# icu-nano, solo mini -29MB, y recortar datos ICU arriesga corrupcion
+# silenciosa en collation de navegadores); gtk3/4-mini N/A (la base no
+# lleva gtk); llvm-libs-mini/nano innecesarios (nada lo exige tras el swap).
+DEBLOATED_MESA_URL='https://github.com/pkgforge-dev/archlinux-pkgs-debloated/releases/download/continuous/mesa-mini-x86_64.pkg.tar.zst'
+
 # Sin AUR en la imagen: mantiene el bootstrap rapido y evita la etapa
 # paru+usuario-aur. AUR llega en arxy fase 2, nunca aqui.
 AUR_PACKAGES=()

@@ -351,6 +351,21 @@ if ! run_in_chroot bash -c install_packages; then
 	exit 1
 fi
 
+# mesa-mini (archlinux-pkgs-debloated, release 'continuous'): mismo
+# pkgname=mesa sin dependencia de llvm-libs. Medido: -169MB (mesa 53.85
+# ->39.5MB + llvm-libs 163.7MB fuera, delink verificado con ldd).
+# Se elige mini sobre nano: nano compila con -Os y upstream advierte de
+# problemas de rendimiento y estabilidad; la imagen corre juegos (steam)
+# y emuladores. No es repo pacman: descarga + -U. llvm-libs queda
+# huerfano (solo mesa lo pedia) y sale con -Rsn; si un futuro PACKAGES
+# lo exige, esto falla en voz alta a proposito.
+if [ -n "${DEBLOATED_MESA_URL:-}" ]; then
+	curl -L --retry 3 -o "${bootstrap}/tmp/mesa-mini.pkg.tar.zst" "${DEBLOATED_MESA_URL}" || { echo "mesa-mini download failed"; exit 1; }
+	run_in_chroot pacman --noconfirm -U /tmp/mesa-mini.pkg.tar.zst || { echo "mesa-mini install failed"; exit 1; }
+	rm -f "${bootstrap}/tmp/mesa-mini.pkg.tar.zst"
+	run_in_chroot pacman --noconfirm -Rsn llvm-libs || { echo "llvm-libs removal failed (alguien lo exige: revisar PACKAGES)"; exit 1; }
+fi
+
 if [ "${#AUR_PACKAGES[@]}" -ne 0 ]; then
 	run_in_chroot pacman --noconfirm --needed -S base-devel paru
 	run_in_chroot useradd -m -G wheel aur
