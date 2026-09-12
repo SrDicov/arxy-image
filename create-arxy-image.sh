@@ -67,6 +67,17 @@ fi
 cd "${script_dir}" || exit 1
 
 echo "Packing ${tarball}..."
+# Nodos /dev estaticos dentro de la imagen: el chroot pelado (sin mounts,
+# tipico en nivel 2) los necesita para gpg (pacman -S verifica firmas).
+# tar los empaqueta; al extraer sin privilegios se omiten con aviso.
+mkdir -p "${bootstrap}/dev"
+for _dev in "null c 1 3" "zero c 1 5" "full c 1 7" "random c 1 8" "urandom c 1 9" "tty c 5 0"; do
+	read -r _name _type _maj _min <<<"${_dev}"
+	# Sin -m (no existe en chimerautils): mknod pelado + chmod.
+	if [ ! -e "${bootstrap}/dev/${_name}" ]; then
+		mknod "${bootstrap}/dev/${_name}" "${_type}" "${_maj}" "${_min}" && chmod 666 "${bootstrap}/dev/${_name}" || { echo "mknod ${_name} fallo"; exit 1; }
+	fi
+done
 # NOTE: -I takes ONE argument (the whole compressor command), quote it.
 # Exclude stale gpg-agent sockets left over from the build chroot.
 tar --numeric-owner --xattrs --acls -I "${ARXY_TAR_COMPRESSOR:-zstd -19 -T0}" \
