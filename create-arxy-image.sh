@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+# Empaqueta root.x86_64/ (construido con PROFILE=arxy) en el tarball de la
+# imagen arxy + su sha256. Requiere root: el rootfs contiene ficheros 0700
+# de root (keyring pacman, gshadow) que deben ir DENTRO de la imagen.
+#
+#   PROFILE=arxy sudo ./create-arch-bootstrap.sh   # paso 1
+#   PROFILE=arxy sudo ./create-arxy-image.sh       # paso 2 (este script)
+#
+# El tarball lo publica el CI en el release 'latest' de arxy-image
+# (ver .github/workflows/build.yml).
+
+export LC_ALL=C
+
+script_dir="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+settings_file="${script_dir}/profiles/${PROFILE:-arxy}.sh"
+if [ ! -f "${settings_file}" ]; then
+	echo "Unknown profile '${PROFILE:-arxy}': ${settings_file} not found"
+	exit 1
+fi
+# shellcheck source=profiles/arxy.sh
+source "${settings_file}"
+
+if [ "${PROFILE_NAME:-}" != "arxy" ]; then
+	echo "Refusing: profile '${PROFILE:-arxy}' is not the arxy profile (got '${PROFILE_NAME:-?}')"
+	echo "Run with PROFILE=arxy (needs root.x86_64/ built with PROFILE=arxy too)."
+	exit 1
+fi
+
+for cmd in tar zstd sha256sum du; do
+	if ! command -v "$cmd" >/dev/null 2>&1; then
+		echo "$cmd is required!"
+		exit 1
+	fi
+done
+
+if [ $EUID != 0 ]; then
+	echo "Root rights are required! (the rootfs holds root-only files that ship inside the image)"
+	exit 1
+fi
+
+bootstrap="${script_dir}/root.x86_64"
+tarball="${script_dir}/${ARXY_IMAGE_TARBALL:-arxy-rootfs-x86_64.tar.zst}"
+
+# --- cordura: esto debe ser un rootfs arxy, no un conty
+[ -d "${bootstrap}" ] || { echo "Missing ${bootstrap}: run PROFILE=arxy sudo ./create-arch-bootstrap.sh first"; exit 1; }
+[ -x "${bootstrap}/usr/bin/bash" ] || { echo "${bootstrap} has no /usr/bin/bash"; exit 1; }
+[ -x "${bootstrap}/usr/bin/pacman" ] || { echo "${bootstrap} has no /usr/bin/pacman"; exit 1; }
+[ -f "${bootstrap}/etc/arch-release" ] || { echo "${bootstrap} has no /etc/arch-release"; exit 1; }
+
+# Guardias de minimalismo: avisan (no abortan) si se colo peso muerto.
+if [ -n "$(ls -A "${bootstrap}/usr/lib/modules" 2>/dev/null)" ]; then
+	echo "WARNING: kernel modules present in usr/lib/modules (did 'base' sneak in?)."
+fi
+if [ -d "${bootstrap}/usr/lib/firmware" ] && [ -n "$(ls -A "${bootstrap}/usr/lib/firmware" 2>/dev/null)" ]; then
+	echo "WARNING: firmware files present in usr/lib/firmware."
+fi
+if [ -n "$(ls -d "${bootstrap}"/usr/lib32 2>/dev/null)" ]; then
+	echo "WARNING: usr/lib32 present (32-bit leaked in?)."
+fi
+
+echo "Rootfs size unpacked: $(du -sh "${bootstrap}" 2>/dev/null | cut -f1)"
+if [ -f "${bootstrap}/pkglist.x86_64.txt" ]; then
+	echo "Packages in image: $(wc -l < "${bootstrap}/pkglist.x86_64.txt")"
+fi
+
+cd "${script_dir}" || exit 1
+
+echo "Packing ${tarball}..."
+# NOTE: -I takes ONE argument (the whole compressor command), quote it.
+# Exclude stale gpg-agent sockets left over from the build chroot.
+tar --numeric-owner --xattrs --acls -I "${ARXY_TAR_COMPRESSOR:-zstd -19 -T0}" \
+	--exclude='./etc/pacman.d/gnupg/S.*' \
+	-cf "${tarball}" -C "${bootstrap}" . || { echo "tar failed"; exit 1; }
+
+sha256sum "${tarball##*/}" > "${tarball}.sha256" || { echo "sha256sum failed"; exit 1; }
+
+echo "Done:"
+ls -lh "${tarball}" "${tarball}.sha256"
+cat "${tarball}.sha256"
+echo
+echo "Next: upload ${tarball##*/} (+ .sha256) to the 'latest' release of arxy-image"
+echo "('arxy setup' lo descarga de ahi y lo verifica contra el .sha256 solo)."

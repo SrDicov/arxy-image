@@ -1,0 +1,48 @@
+name: build-image
+
+# Reconstruye la imagen arxy y la publica en el release 'latest',
+# de donde 'arxy setup' la descarga (URL latest + .sha256 autoverificado).
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 * * 5'   # viernes 04:00 UTC
+  push:
+    paths:
+      - 'profiles/arxy.sh'
+      - 'create-arch-bootstrap.sh'
+      - 'create-arxy-image.sh'
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+      options: --privileged
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build bootstrap (root.x86_64)
+        run: |
+          chmod +x create-arch-bootstrap.sh create-arxy-image.sh
+          PROFILE=arxy ./create-arch-bootstrap.sh
+
+      - name: Pack image tarball
+        run: PROFILE=arxy ./create-arxy-image.sh
+
+      - name: Publish to 'latest' release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pacman -S --noconfirm --needed github-cli
+          tag=latest
+          gh release view "$tag" >/dev/null 2>&1 || \
+            gh release create "$tag" --title "latest" \
+              --notes "Imagen arxy actual (construida por CI). 'arxy setup' descarga de aqui."
+          gh release upload "$tag" --clobber \
+            arxy-rootfs-x86_64.tar.zst arxy-rootfs-x86_64.tar.zst.sha256
+          gh release view "$tag" --json assets --jq '.assets[].name'

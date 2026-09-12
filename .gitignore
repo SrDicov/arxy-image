@@ -1,0 +1,7 @@
+# Build outputs (se generan en CI o a mano, nunca se commitean)
+root.x86_64/
+archlinux-bootstrap-*.tar.zst
+sha256sums.txt
+pkglist.*.txt
+version
+arxy-rootfs-*.tar.zst*
