@@ -8,13 +8,10 @@ on:
   schedule:
     - cron: '0 4 * * 5'   # viernes 04:00 UTC
   push:
+    # Como en AnyLinux: los .md no disparan builds (un build son ~20 min).
     paths-ignore:
       - '**/*.md'
-    paths:
-      - 'profiles/arxy.sh'
-      - 'create-arch-bootstrap.sh'
-      - 'create-arxy-image.sh'
-      - '.github/workflows/build.yml'
+      - 'LICENSE'
 
 permissions:
   contents: write
