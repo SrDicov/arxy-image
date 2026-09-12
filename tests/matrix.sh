@@ -91,14 +91,17 @@ else
 fi
 # Semantica de rollback: .old es siempre el setup INMEDIATO anterior
 # (el swap hace rm -rf del .old previo: no hay "primero" que rescatar).
-# Se prueba con un marcador DENTRO del rootfs (el version file no sirve:
-# vive al lado del root, no dentro, y el rollback no lo toca).
+# Se prueba con un marcador DENTRO del rootfs + la fecha del version file
+# (el CLI la restaura desde la copia interna; regla 3 vale tras rollback).
 t "rollback restaura setup anterior" -- sh -c '
+    vf="${ARXY_ROOT%/*}/version"
     echo uno > "$ARXY_ROOT/.matrix-mark" || exit 2
-    arxy setup >/dev/null 2>&1 || exit 3
-    test ! -e "$ARXY_ROOT/.matrix-mark" || exit 4
-    arxy rollback >/dev/null 2>&1 || exit 5
-    test "$(cat "$ARXY_ROOT/.matrix-mark" 2>/dev/null)" = uno || exit 6
+    d1="$(grep ^date= "$vf" 2>/dev/null | cut -d= -f2)"; test -n "$d1" || exit 3
+    arxy setup >/dev/null 2>&1 || exit 4
+    test ! -e "$ARXY_ROOT/.matrix-mark" || exit 5
+    arxy rollback >/dev/null 2>&1 || exit 6
+    test "$(cat "$ARXY_ROOT/.matrix-mark" 2>/dev/null)" = uno || exit 7
+    test "$(grep ^date= "$vf" 2>/dev/null | cut -d= -f2)" = "$d1" || exit 8
     rm -f "$ARXY_ROOT/.matrix-mark"'
 t "clean --apply borra rollback" -- sh -c 'test -d "$ARXY_ROOT.old" && arxy clean --apply | grep -q "limpieza hecha" && test ! -d "$ARXY_ROOT.old"'
 
