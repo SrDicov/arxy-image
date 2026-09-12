@@ -40,7 +40,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pacman -S --noconfirm --needed github-cli
+          pacman -Sy --noconfirm --needed github-cli
           tag=latest
           gh release view "$tag" >/dev/null 2>&1 || \
             gh release create "$tag" --title "latest" \
