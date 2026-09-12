@@ -36,42 +36,14 @@ jobs:
       - name: Pack image tarball
         run: PROFILE=arxy ./create-arxy-image.sh
 
-      - name: Smoke test (la imagen arranca en nivel 1 y 2)
-        # Puerta de publicacion: si esto falla, el release no se toca.
-        # Prueba el tarball recien construido (file://), no el publicado.
+      - name: Matrix (puerta de publicacion)
+        # tests/matrix.sh: 25+ assertions de contenido sobre el tarball
+        # recien construido. Si falla, el release no se toca.
         run: |
           pacman -Sy --noconfirm --needed bubblewrap file
           curl -fsSL https://raw.githubusercontent.com/SrDicov/arxy/main/src/arxy -o /usr/local/bin/arxy
           chmod +x /usr/local/bin/arxy
-          export ARXY_IMAGE_URL="file://$PWD/arxy-rootfs-x86_64.tar.zst"
-          arxy setup
-          arxy doctor | tee doctor.txt
-          grep -q 'nivel 1' doctor.txt
-          arxy run /usr/bin/true
-          arxy run /usr/bin/bash --version
-          arxy run /usr/bin/pacman --version | grep -q 'Pacman v'
-          # Nivel 2 forzado (ld-linux + chroot, sin bwrap)
-          ARXY_LEVEL=2 arxy run /usr/bin/true
-          ARXY_LEVEL=2 arxy run /usr/bin/bash --version
-          ARXY_LEVEL=2 arxy run /usr/bin/pacman --version | grep -q 'Pacman v'
-          # Nivel 2 autodetectado (bwrap que siempre falla)
-          mkdir -p /tmp/nobwrap
-          printf '#!/bin/sh\nexit 1\n' > /tmp/nobwrap/bwrap
-          chmod +x /tmp/nobwrap/bwrap
-          PATH="/tmp/nobwrap:$PATH" arxy doctor | grep -q 'nivel 2'
-          PATH="/tmp/nobwrap:$PATH" arxy run /usr/bin/true
-          # Export con .desktop sintetico (bash no trae .desktop propio)
-          printf '[Desktop Entry]\nType=Application\nName=Arxy Test\nExec=/usr/bin/true\n' \
-            > /var/lib/arxy/root/usr/share/applications/arxy-test.desktop
-          arxy export --all
-          test -f /root/.local/share/applications/arxy-arxy-test.desktop
-          arxy unexport arxy-test
-          # Install/remove en nivel 2 (chroot) + guard de AUR en nivel 2
-          ARXY_LEVEL=2 arxy install tree
-          ARXY_LEVEL=2 arxy run tree --version
-          ARXY_LEVEL=2 arxy remove tree
-          ARXY_LEVEL=2 arxy install --aur nano 2>&1 | grep -q 'necesita nivel 1'
-          echo SMOKE_OK
+          MATRIX_IMAGE="$PWD/arxy-rootfs-x86_64.tar.zst" MATRIX_WRITE2=1 ./tests/matrix.sh
 
       - name: Publish to 'latest' release
         env:

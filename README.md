@@ -16,7 +16,8 @@ desempaquetado, ~220MB en `arxy-rootfs-x86_64.tar.zst`.
 El CI la reconstruye cada viernes + a demanda y publica en el release
 **[`latest`](https://github.com/SrDicov/arxy-image/releases/tag/latest)**
 (`arxy-rootfs-x86_64.tar.zst` + `.sha256`). `arxy setup` descarga de ahí y
-verifica contra el `.sha256` automáticamente.
+verifica contra el `.sha256` automáticamente. Cada build corre
+`tests/matrix.sh` como puerta: si falla, no se publica.
 
 ## Reconstruir a mano (requiere root + ~10GB libres, vale en Void con sudo)
 
@@ -39,7 +40,9 @@ perfil `arxy`.
 | `profiles/arxy.sh` | perfil: paquetes, locales, mirrorlist, compresión |
 | `create-arch-bootstrap.sh` | paso 1: bootstrap Arch → `root.x86_64/` |
 | `create-arxy-image.sh` | paso 2: `root.x86_64/` → tarball + sha256 |
-| `.github/workflows/build.yml` | CI: build semanal + publicación en `latest` |
+| `tests/matrix.sh` | puerta de publicación: 25+ checks sobre el tarball |
+| `tests/README.md` | qué asserta cada check + matrix manual 5 distros |
+| `.github/workflows/build.yml` | CI: build semanal + matrix + publicación en `latest` |
 
 ## Licencia
 
