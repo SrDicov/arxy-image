@@ -41,10 +41,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           pacman -Sy --noconfirm --needed github-cli git
+          repo="SrDicov/arxy-image"
           tag=latest
-          gh release view "$tag" >/dev/null 2>&1 || \
-            gh release create "$tag" --title "latest" \
+          gh release view "$tag" -R "$repo" >/dev/null 2>&1 || \
+            gh release create "$tag" -R "$repo" --title "latest" \
               --notes "Imagen arxy actual (construida por CI). 'arxy setup' descarga de aqui."
-          gh release upload "$tag" --clobber \
+          gh release upload "$tag" -R "$repo" --clobber \
             arxy-rootfs-x86_64.tar.zst arxy-rootfs-x86_64.tar.zst.sha256
-          gh release view "$tag" --json assets --jq '.assets[].name'
+          gh release view "$tag" -R "$repo" --json assets --jq '.assets[].name'
