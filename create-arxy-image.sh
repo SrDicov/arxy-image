@@ -71,6 +71,7 @@ cd "${script_dir}" || exit 1
 # ver Fase 2). strip: NO, Arch ya distribuye strippeado (2139 ficheros, -0MB).
 # dedup en build: NO (2MB en base; el auto-dedup de runtime lo cubre).
 tidy_rootfs() { # <bootstrap>
+	: "${1:?tidy_rootfs requiere dir}"
 	# docs/man/info: restos del tarball base (NoExtract no filtra lo
 	# preexistente) -53MB.
 	rm -rf "$1/usr/share/man" "$1/usr/share/doc" "$1/usr/share/info" "$1/usr/share/gtk-doc"
@@ -84,7 +85,7 @@ tidy_rootfs() { # <bootstrap>
 	rm -rf "${1:?}/usr/share/i18n"
 	for _l in "${1:?}/usr/share/locale/"*; do
 		_b="${_l##*/}"
-		case "$_b" in C*|en*|locale.alias) ;; *) rm -rf "$_l" ;; esac
+		case "$_b" in C|C.*|en*|locale.alias) ;; *) rm -rf "$_l" ;; esac
 	done
 	# headers: el runtime no compila (los builds AUR declaran sus deps y las
 	# instalan con headers; si un build los exige sin declararlos falla EN

@@ -360,10 +360,12 @@ fi
 # huerfano (solo mesa lo pedia) y sale con -Rsn; si un futuro PACKAGES
 # lo exige, esto falla en voz alta a proposito.
 if [ -n "${DEBLOATED_MESA_URL:-}" ]; then
-	curl -L --retry 3 -o "${bootstrap}/tmp/mesa-mini.pkg.tar.zst" "${DEBLOATED_MESA_URL}" || { echo "mesa-mini download failed"; exit 1; }
-	run_in_chroot pacman --noconfirm -U /tmp/mesa-mini.pkg.tar.zst || { echo "mesa-mini install failed"; exit 1; }
+	curl -fL --retry 3 -o "${bootstrap}/tmp/mesa-mini.pkg.tar.zst" "${DEBLOATED_MESA_URL}" || { echo "mesa-mini download failed"; unmount_chroot; exit 1; }
+	run_in_chroot pacman --noconfirm -U /tmp/mesa-mini.pkg.tar.zst || { echo "mesa-mini install failed"; unmount_chroot; exit 1; }
 	rm -f "${bootstrap}/tmp/mesa-mini.pkg.tar.zst"
-	run_in_chroot pacman --noconfirm -Rsn llvm-libs || { echo "llvm-libs removal failed (alguien lo exige: revisar PACKAGES)"; exit 1; }
+	if run_in_chroot pacman -Qq llvm-libs >/dev/null 2>&1; then
+		run_in_chroot pacman --noconfirm -Rsn llvm-libs || { echo "llvm-libs removal failed (alguien lo exige: revisar PACKAGES)"; unmount_chroot; exit 1; }
+	fi
 fi
 
 if [ "${#AUR_PACKAGES[@]}" -ne 0 ]; then
@@ -382,7 +384,15 @@ if [ "${#AUR_PACKAGES[@]}" -ne 0 ]; then
 	rm -rf "${bootstrap}"/home/aur
 fi
 
-run_in_chroot locale-gen
+run_in_chroot locale-gen || { echo "locale-gen FAILED"; unmount_chroot; exit 1; }
+# i18n excluido de AQUI en adelante (no antes: locale-gen necesita los
+# charmaps). Evita que futuros installs restauren las fuentes (+17MB).
+sed -i 's|^NoExtract   = |NoExtract   = usr/share/i18n/* |' "${bootstrap}"/etc/pacman.conf
+# mesa-mini congelado: sin esto el primer 'arxy update' lo reemplaza por
+# mesa oficial + llvm-libs (+170MB de vuelta). Quitar el hold actualiza.
+sed -i 's|^#IgnorePkg   =|IgnorePkg   = mesa|' "${bootstrap}"/etc/pacman.conf
+grep -q '^IgnorePkg' "${bootstrap}"/etc/pacman.conf || { echo "IgnorePkg sed no-op (formato pacman.conf cambio)"; unmount_chroot; exit 1; }
+grep -q 'usr/share/i18n' "${bootstrap}"/etc/pacman.conf || { echo "i18n NoExtract sed no-op"; unmount_chroot; exit 1; }
 
 echo "Generating package info, please wait..."
 
