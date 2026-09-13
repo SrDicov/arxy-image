@@ -4,14 +4,18 @@
 ![license](https://img.shields.io/badge/license-MIT-green)
 
 Construye el rootfs Arch mínimo que consume el CLI
-[**arxy**](https://github.com/SrDicov/arxy): ~215 paquetes, ~0.9GB
-desempaquetado, ~220MB en `arxy-rootfs-x86_64.tar.zst`.
+[**arxy**](https://github.com/SrDicov/arxy): ~140 paquetes, ~490MB
+desempaquetado, ~128MB en `arxy-rootfs-x86_64.tar.zst`.
 
 - Repos: `core` + `extra` + `multilib` (habilitado, **sin** paquetes
   `lib32-*` preinstalados; Steam los instala después).
 - Sin kernel, sin firmware, sin X server propio, sin toolchain, sin AUR.
-- Locales `en_US` + `es_ES`, mirrorlist mundial estática, keyring
-  pre-inicializado.
+- Mesa-mini sin LLVM (`llvm-libs` purgado tras el swap, medido -169MB;
+  si un futuro paquete lo exige, el build falla a propósito): Intel iris
+  y softpipe verificados en hardware real; AMD/NVIDIA no probados en HW
+  (`arxy install gpu-amd|gpu-nvidia` instala el stack completo).
+- Locale `en_US` (+ `C.UTF-8`; `es_ES` fuera, -5MB), mirrorlist mundial
+  estática, keyring pre-inicializado.
 
 El CI la reconstruye cada viernes + a demanda y publica en el release
 **[`latest`](https://github.com/SrDicov/arxy-image/releases/tag/latest)**
@@ -40,7 +44,7 @@ perfil `arxy`.
 | `profiles/arxy.sh` | perfil: paquetes, locales, mirrorlist, compresión |
 | `create-arch-bootstrap.sh` | paso 1: bootstrap Arch → `root.x86_64/` |
 | `create-arxy-image.sh` | paso 2: `root.x86_64/` → tarball + sha256 |
-| `tests/matrix.sh` | puerta de publicación: 25+ checks sobre el tarball |
+| `tests/matrix.sh` | puerta de publicación: 25–28 checks según nivel y flags |
 | `tests/README.md` | qué asserta cada check + matrix manual 5 distros |
 | `.github/workflows/build.yml` | CI: build semanal + matrix + publicación en `latest` |
 
