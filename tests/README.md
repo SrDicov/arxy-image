@@ -1,7 +1,8 @@
 # tests/ — puerta de publicacion de la imagen
 
-`matrix.sh` corre 25+ checks contra un tarball y falla el build si algo
-rompe. El CI la ejecuta en cada build (Arch privilegiado, `MATRIX_WRITE2=1`);
+`matrix.sh` corre 25–28 checks según nivel y flags (rama libc,
+autodetección L2 y chroot `MATRIX_WRITE2=1` son condicionales) y falla
+el build si algo rompe. El CI la ejecuta en cada build (Arch privilegiado, `MATRIX_WRITE2=1`);
 a mano se corre en 5 distros antes de un release.
 
 ## Que asserta cada check (y que bug cazaria)
@@ -48,6 +49,10 @@ docker exec <c> /matrix.sh
 | `ARXY_IMAGE_URL` | `file://$MATRIX_IMAGE` | URL explicita (manda) |
 | `ARXY_ROOT` | `/var/lib/arxy/root` | rootfs aislado para no tocar el del host |
 | `MATRIX_WRITE2` | vacio (=omitir) | escrituras en nivel 2 (chroot) |
+
+## Convención
+
+Cambios de tamaño con número medido (antes/después en el commit).
 
 ## Limite
 
