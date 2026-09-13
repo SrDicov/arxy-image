@@ -37,6 +37,12 @@ jobs:
         run: PROFILE=arxy ./create-arxy-image.sh
 
       - name: Matrix (puerta de publicacion)
+        # Actions mete HOME=/github/home pero el CLI escribe lanzadores en
+        # el home real de root (REAL_HOME, e04a9b6): sin esto el check
+        # 'export sintetico' mira en el dir equivocado. No es producto:
+        # export/unexport resuelven REAL_APPS por si mismos.
+        env:
+          HOME: /root
         # tests/matrix.sh: 25+ assertions de contenido sobre el tarball
         # recien construido. Si falla, el release no se toca.
         run: |
