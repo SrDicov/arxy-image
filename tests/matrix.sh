@@ -59,9 +59,19 @@ t "search con contenido" -- sh -c 'arxy search nano | grep -q "extra/nano"'
 t "L2: run true" -- sh -c 'ARXY_LEVEL=2 arxy run /usr/bin/true'
 t "L2: info con contenido" -- sh -c 'ARXY_LEVEL=2 arxy info bash | grep -q "^Name *: bash"'
 t "L2: AUR bloqueado con mensaje" -- sh -c 'ARXY_LEVEL=2 arxy install --aur nano 2>&1 | grep -q "necesita nivel 1"'
+# Foto de lanzadores previos: export --all crea uno por .desktop del rootfs
+# y solo el sintético se limpia; al final se exige cero residuo nuevo.
+SNAP_F="$(mktemp)" || exit 99
+ls "$APPS"/arxy-*.desktop 2>/dev/null | sort >"$SNAP_F" || true
 printf '[Desktop Entry]\nType=Application\nName=Arxy Test\nExec=/usr/bin/true\n' > "$R/usr/share/applications/arxy-test.desktop"
 t "export sintetico" -- sh -c "arxy export --all >/dev/null && test -f '$APPS/arxy-arxy-test.desktop'"
 t "unexport" -- arxy unexport arxy-test
+# Export en nivel 2 forzado (--all usa find directo sobre el rootfs, sin
+# bwrap). Gap histórico sin cobertura (validado a mano en 6.5.5): si L2
+# regresa, aquí se caza. Verificado que el contenido se reescribe igual.
+t "L2: export --all" -- sh -c "ARXY_LEVEL=2 arxy export --all >/dev/null && test -f '$APPS/arxy-arxy-test.desktop'"
+t "L2: export contenido" -- sh -c "grep -q '^Exec=arxy run /usr/bin/true' '$APPS/arxy-arxy-test.desktop' && grep -q '^X-Arxy-Pkg=' '$APPS/arxy-arxy-test.desktop'"
+t "L2: unexport" -- arxy unexport arxy-test
 t "install (escritura)" -- arxy install tree
 t "run instalado" -- arxy run tree --version
 t "remove" -- arxy remove tree
@@ -86,6 +96,12 @@ fi
 if [[ -n "${MATRIX_WRITE2:-}" ]]; then
     # Escrituras en nivel 2 (chroot con mounts): exige privilegios.
     t "L2: install/remove (chroot)" -- sh -c 'ARXY_LEVEL=2 arxy install tree && ARXY_LEVEL=2 arxy run tree --version && ARXY_LEVEL=2 arxy remove tree'
+    # Export en L2 tras escritura vía chroot: el lanzador debe crearse con
+    # contenido válido aunque el rootfs se haya mutado sin namespaces.
+    # (End-to-end "paquete pacman que trae .desktop instalado en L2" sigue
+    # manual: sin paquete fixture diminuto elegido.)
+    t "L2: export --all tras install (chroot)" -- sh -c "ARXY_LEVEL=2 arxy export --all >/dev/null && grep -q '^X-Arxy-Pkg=' '$APPS/arxy-arxy-test.desktop'"
+    t "L2: unexport tras install (chroot)" -- arxy unexport arxy-test
 else
     echo "INFO: escrituras L2 omitidas (MATRIX_WRITE2 vacio; se prueban en CI)"
 fi
@@ -105,5 +121,10 @@ t "rollback restaura setup anterior" -- sh -c '
     rm -f "$ARXY_ROOT/.matrix-mark"'
 t "clean --apply borra rollback" -- sh -c 'test -d "$ARXY_ROOT.old" && arxy clean --apply | grep -q "limpieza hecha" && test ! -d "$ARXY_ROOT.old"'
 
+# Limpieza de lo creado por export --all (en host real deja los lanzadores
+# de la imagen; en docker es inocuo): borra exactamente lo nuevo vs la foto
+# y falla LISTANDO lo que no se pudo borrar (contenido, no solo rc).
+t "limpia residuo en REAL_APPS" -- sh -c "ls '$APPS'/arxy-*.desktop 2>/dev/null | sort >'$SNAP_F.cur' || true; extra=\"\$(comm -13 '$SNAP_F' '$SNAP_F.cur')\"; printf '%s\n' \"\$extra\" | while IFS= read -r f; do test -z \"\$f\" || rm -f \"\$f\"; done; ls '$APPS'/arxy-*.desktop 2>/dev/null | sort >'$SNAP_F.cur' || true; rest=\"\$(comm -13 '$SNAP_F' '$SNAP_F.cur')\"; printf '%s\n' \"\$rest\"; test -z \"\$rest\""
+rm -f "$SNAP_F" "$SNAP_F.cur"
 echo "== resultado: $([[ $FAIL -eq 0 ]] && echo TODO_OK || echo "$FAIL FALLOS")"
 exit $FAIL

@@ -44,7 +44,7 @@ perfil `arxy`.
 | `profiles/arxy.sh` | perfil: paquetes, locales, mirrorlist, compresión |
 | `create-arch-bootstrap.sh` | paso 1: bootstrap Arch → `root.x86_64/` |
 | `create-arxy-image.sh` | paso 2: `root.x86_64/` → tarball + sha256 |
-| `tests/matrix.sh` | puerta de publicación: 25–28 checks según nivel y flags |
+| `tests/matrix.sh` | puerta de publicación: 29–34 checks según nivel y flags |
 | `tests/README.md` | qué asserta cada check + matrix manual 5 distros |
 | `.github/workflows/build.yml` | CI: build semanal + matrix + publicación en `latest` |
 

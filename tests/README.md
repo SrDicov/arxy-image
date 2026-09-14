@@ -1,6 +1,6 @@
 # tests/ — puerta de publicacion de la imagen
 
-`matrix.sh` corre 25–28 checks según nivel y flags (rama libc,
+`matrix.sh` corre 29–34 checks según nivel y flags (rama libc,
 autodetección L2 y chroot `MATRIX_WRITE2=1` son condicionales) y falla
 el build si algo rompe. El CI la ejecuta en cada build (Arch privilegiado, `MATRIX_WRITE2=1`);
 a mano se corre en 5 distros antes de un release.
@@ -16,6 +16,9 @@ a mano se corre en 5 distros antes de un release.
 | which/info/list/search **con contenido** | lecturas con `Include` resueltos al rootfs | bug Includes L2 (Fase 4: `mirrorlist could not be read`) |
 | L2 forzado (run/info/AUR) | mismo path sin bwrap | regresion de nivel 2 |
 | export/unexport sintetico | lanzadores `.desktop` + `update-desktop-database` | regresion de export |
+| L2: export --all + contenido | export forzado sin bwrap (`Exec` reescrito, `X-Arxy-Pkg`) | regresion de export en nivel 2 (6.5.5 era manual) |
+| L2: export tras install chroot | export en L2 sobre rootfs mutado vía chroot | export ciego tras escritura L2 |
+| limpia residuo en REAL_APPS | borra lanzadores nuevos vs foto inicial, falla listando resto | acumulación de lanzadores en host real |
 | install/run/remove tree | escrituras pacman + scriptlets | imagen sin keyring, hooks rotos |
 | fc-list con contenido | fontconfig + fuentes | GUI sin texto |
 | clean/quickstart/doctor --fix | CLI nuevo del repo `arxy` contra imagen nueva | deriva CLI-imagen |
