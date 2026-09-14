@@ -202,11 +202,8 @@ sed 's/#DisableSandboxSyscalls/#DisableSandboxSyscalls\nDisableSandbox/' "${boot
 mv -f _ "${bootstrap}"/etc/pacman.conf
 
 if [ -n "${ENABLE_MULTILIB-1}" ]; then
-{
-	echo
-	echo "[multilib]"
-	echo "Include = /etc/pacman.d/mirrorlist"
-} >> "${bootstrap}"/etc/pacman.conf
+# Descomentar la estanza stock (no añadir: duplicaria el registro).
+sed -i -E '/^#\[multilib\]/,/^#?Include/s/^#//' "${bootstrap}"/etc/pacman.conf
 fi
 
 run_in_chroot pacman-key --init
