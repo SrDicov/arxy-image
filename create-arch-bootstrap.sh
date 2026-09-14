@@ -10,7 +10,7 @@ if [ -n "${PROFILE:-}" ]; then
 	settings_file="${script_dir}/profiles/${PROFILE}.sh"
 	if [ ! -f "${settings_file}" ]; then
 		echo "Unknown profile '${PROFILE}': ${settings_file} not found"
-		echo "Available: $(ls "${script_dir}"/profiles/*.sh 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.sh$//' | tr '\n' ' ')"
+		echo "Available: $(shopt -s nullglob; for p in "${script_dir}"/profiles/*.sh; do basename "$p" .sh; done 2>/dev/null | tr '\n' ' ')"
 		exit 1
 	fi
 fi
@@ -91,7 +91,7 @@ install_packages () {
 }
 
 install_aur_packages () {
-	cd /home/aur
+	cd /home/aur || exit 1
 
 	echo "Checking if packages are present in the AUR, please wait..."
 	for p in ${aur_pkgs}; do
@@ -106,6 +106,7 @@ install_aur_packages () {
 		echo ${bad_aur_pkglist} > /home/aur/bad_aur_pkglist.txt
 	fi
 
+	# shellcheck disable=SC2034 # i es contador de reintentos, deliberadamente sin usar
 	for i in {1..10}; do
 		if paru --noconfirm --sync --removemake --skipreview --useask --clonedir /home/aur --builddir /home/aur -a ${good_aur_pkglist}; then
 			break
@@ -138,14 +139,14 @@ fi
 cd "${script_dir}" || exit 1
 
 if [ ! -f sha256sums.txt ] || [ ! -f archlinux-bootstrap-x86_64.tar.zst ]; then
-	curl ${proxy[@]} -#LO "$BOOTSTRAP_SHA256SUM_FILE_URL" || (echo "Failed to download sha256sums.txt file"; exit 1)
+	curl "${proxy[@]}" -#LO "$BOOTSTRAP_SHA256SUM_FILE_URL" || (echo "Failed to download sha256sums.txt file"; exit 1)
 
 	grep archlinux-bootstrap-x86_64.tar.zst sha256sums.txt > _
 	mv -f _ sha256sums.txt
 
 	for link in "${BOOTSTRAP_DOWNLOAD_URLS[@]}"; do
 		echo "Downloading Arch Linux bootstrap from $link"
-		curl ${proxy[@]} -#LO "$link"
+		curl "${proxy[@]}" -#LO "$link"
 
 		echo "Verifying the integrity of the bootstrap"
 		if sha256sum -c sha256sums.txt &>/dev/null; then
