@@ -1,6 +1,6 @@
 # tests/ — puerta de publicacion de la imagen
 
-`matrix.sh` corre 31–36 checks según nivel y flags (rama libc,
+`matrix.sh` corre 33–41 checks según nivel y flags (rama libc,
 autodetección L2 y chroot `MATRIX_WRITE2=1` son condicionales) y falla
 el build si algo rompe. El CI la ejecuta en cada build (Arch privilegiado, `MATRIX_WRITE2=1`);
 a mano se corre en 5 distros antes de un release.
@@ -11,11 +11,13 @@ a mano se corre en 5 distros antes de un release.
 |---|---|---|
 | doctor reporta nivel | bwrap/userns detectados | entorno roto silencioso |
 | setup file:// | descarga+verifica+extrae+`-Sy` atomicos | tarball corrupto publicado |
+| setup deja rootfs valido | `pacman` ejecutable + `arch-release` tras setup | setup que reporta OK sin rootfs |
 | run/bash/pacman --version | runtime L1 basico (libalpm, glib) | imagen sin dependencias |
 | libc del subsistema | el binario usa la libc de la imagen, no la del host | contaminacion host (musl/glibc) |
 | which/info/list/search **con contenido** | lecturas con `Include` resueltos al rootfs | bug Includes L2 (Fase 4: `mirrorlist could not be read`) |
 | L2 forzado (run/info/AUR) | mismo path sin bwrap | regresion de nivel 2 |
 | export/unexport sintetico | lanzadores `.desktop` + `update-desktop-database` | regresion de export |
+| export contenido + unexport verificado | `Exec` reescrito y `X-Arxy-Pkg`; unexport borra de verdad | lanzador podrido; unexport mudo (rc 0 sin borrar) |
 | L2: export --all + contenido | export forzado sin bwrap (`Exec` reescrito, `X-Arxy-Pkg`) | regresion de export en nivel 2 (6.5.5 era manual) |
 | L2: export tras install chroot | export en L2 sobre rootfs mutado vía chroot | export ciego tras escritura L2 |
 | limpia residuo en REAL_APPS | borra lanzadores nuevos vs foto inicial, falla listando resto | acumulación de lanzadores en host real |
@@ -33,6 +35,7 @@ solo ese check falla. No es regresión de la imagen.
 | clean --apply borra rollback | `clean` recupera el espacio de `.old` | `root.old` huerfano de 1GB+ |
 | L2 autodetectado (solo L1) | sin bwrap cae a nivel 2 | deteccion rota |
 | L2 install/remove (solo `MATRIX_WRITE2`) | pacman via chroot con mounts | regresion de chroot |
+| L2: xterm real install/export/remove (solo `MATRIX_WRITE2`) | paquete pacman con `.desktop` instalado en chroot + export por nombre (`Exec`+`X-Arxy-Pkg`, 2 lanzadores); `remove` borra sus lanzadores | `pkg_desktops` ciego en L2 con paquetes reales (6.5.5 era manual); lanzadores huerfanos tras remove |
 
 ## Manual 5 distros (pre-release)
 

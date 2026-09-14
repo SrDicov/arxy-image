@@ -27,7 +27,8 @@ R="$ARXY_ROOT"
 # Lanzadores aislados: XDG_DATA_HOME manda sobre REAL_HOME en el CLI, asi el
 # export escribe aqui venga de donde venga SUDO_USER (cierra el gotcha de los
 # FAILs en falso en host: antes miraba $HOME y escribia en /home/$SUDO_USER).
-export XDG_DATA_HOME="$(mktemp -d)" || exit 99
+XDG_DATA_HOME="$(mktemp -d)" || exit 99
+export XDG_DATA_HOME
 chmod 777 "$XDG_DATA_HOME" # el usuario real puede no ser root (sudo -E)
 APPS="$XDG_DATA_HOME/applications"
 FAIL=0
@@ -45,8 +46,9 @@ t "doctor reporta nivel" -- sh -c 'arxy doctor | grep -q "nivel [12]"'
 LEVEL="$(arxy doctor 2>/dev/null | grep -o 'nivel [12]' | head -1)"
 echo "INFO: detectado $LEVEL"
 t "setup file://" -- arxy setup
+t "setup deja rootfs valido" -- sh -c "test -x '$R/usr/bin/pacman' && test -f '$R/etc/arch-release'"
 t "run true" -- arxy run /usr/bin/true
-t "bash --version" -- arxy run /usr/bin/bash --version
+t "bash --version" -- sh -c 'arxy run /usr/bin/bash --version | grep -q "GNU bash"'
 t "pacman --version (carga libalpm+glib)" -- sh -c 'arxy run /usr/bin/pacman --version | grep -q Pacman'
 if [[ "$LEVEL" == "nivel 1" ]]; then
     # En L1 / es el subsistema: libc debe verse como /usr/lib/...
@@ -70,15 +72,16 @@ SNAP_F="$(mktemp)" || exit 99
 ls "$APPS"/arxy-*.desktop 2>/dev/null | sort >"$SNAP_F" || true
 printf '[Desktop Entry]\nType=Application\nName=Arxy Test\nExec=/usr/bin/true\n' > "$R/usr/share/applications/arxy-test.desktop"
 t "export sintetico" -- sh -c "arxy export --all >/dev/null && test -f '$APPS/arxy-arxy-test.desktop'"
-t "unexport" -- arxy unexport arxy-test
+t "export contenido" -- sh -c "grep -q '^Exec=arxy run /usr/bin/true' '$APPS/arxy-arxy-test.desktop' && grep -q '^X-Arxy-Pkg=' '$APPS/arxy-arxy-test.desktop'"
+t "unexport" -- sh -c "arxy unexport arxy-test && test ! -f '$APPS/arxy-arxy-test.desktop'"
 # Export en nivel 2 forzado (--all usa find directo sobre el rootfs, sin
 # bwrap). Gap histórico sin cobertura (validado a mano en 6.5.5): si L2
 # regresa, aquí se caza. Verificado que el contenido se reescribe igual.
 t "L2: export --all" -- sh -c "ARXY_LEVEL=2 arxy export --all >/dev/null && test -f '$APPS/arxy-arxy-test.desktop'"
 t "L2: export contenido" -- sh -c "grep -q '^Exec=arxy run /usr/bin/true' '$APPS/arxy-arxy-test.desktop' && grep -q '^X-Arxy-Pkg=' '$APPS/arxy-arxy-test.desktop'"
-t "L2: unexport" -- arxy unexport arxy-test
+t "L2: unexport" -- sh -c "arxy unexport arxy-test && test ! -f '$APPS/arxy-arxy-test.desktop'"
 t "install (escritura)" -- arxy install tree
-t "run instalado" -- arxy run tree --version
+t "run instalado" -- sh -c 'arxy run tree --version | grep -qE "tree v[0-9]"'
 t "remove" -- arxy remove tree
 t "fc-list con contenido" -- sh -c 'arxy run /usr/bin/fc-list | grep -q "\.ttf"'
 t "clean dry-run no toca" -- sh -c 'arxy clean | grep -q "dry-run"'
@@ -102,13 +105,23 @@ else
 fi
 if [[ -n "${MATRIX_WRITE2:-}" ]]; then
     # Escrituras en nivel 2 (chroot con mounts): exige privilegios.
-    t "L2: install/remove (chroot)" -- sh -c 'ARXY_LEVEL=2 arxy install tree && ARXY_LEVEL=2 arxy run tree --version && ARXY_LEVEL=2 arxy remove tree'
+    t "L2: install/remove (chroot)" -- sh -c 'ARXY_LEVEL=2 arxy install tree && ARXY_LEVEL=2 arxy run tree --version | grep -qE "tree v[0-9]" && ARXY_LEVEL=2 arxy remove tree'
     # Export en L2 tras escritura vía chroot: el lanzador debe crearse con
     # contenido válido aunque el rootfs se haya mutado sin namespaces.
-    # (End-to-end "paquete pacman que trae .desktop instalado en L2" sigue
-    # manual: sin paquete fixture diminuto elegido.)
+    # E2E con paquete real (xterm) más abajo: install en chroot + export por
+    # nombre + remove que limpia sus lanzadores (remove borra los
+    # X-Arxy-Pkg=$pkg; unexport aparte solo cubre el sintetico).
     t "L2: export --all tras install (chroot)" -- sh -c "ARXY_LEVEL=2 arxy export --all >/dev/null && grep -q '^X-Arxy-Pkg=' '$APPS/arxy-arxy-test.desktop'"
-    t "L2: unexport tras install (chroot)" -- arxy unexport arxy-test
+    t "L2: unexport tras install (chroot)" -- sh -c "arxy unexport arxy-test && test ! -f '$APPS/arxy-arxy-test.desktop'"
+    # E2E: paquete pacman REAL con .desktop instalado en L2 (chroot) y
+    # exportado por nombre de paquete (ejercita pkg_desktops con rutas
+    # prefijadas por --root, el punto ciego del ciclo 6.5.5).
+    # Fixture: xterm (extra, ~1MB+libs X ya casi todas en la mini, sin gtk3;
+    # trae xterm.desktop+uxterm.desktop limpios — feh se descarto: su
+    # .desktop lleva NoDisplay=true y export lo salta a proposito).
+    t "L2: instala paquete con .desktop (chroot)" -- sh -c 'ARXY_LEVEL=2 arxy install xterm && test -f "$ARXY_ROOT/usr/share/applications/xterm.desktop"'
+    t "L2: export del .desktop real" -- sh -c "ARXY_LEVEL=2 arxy export xterm >/dev/null && grep -q '^Exec=arxy run /usr/bin/xterm' '$APPS/arxy-xterm.desktop' && grep -q '^X-Arxy-Pkg=xterm' '$APPS/arxy-xterm.desktop' && test -f '$APPS/arxy-uxterm.desktop'"
+    t "L2: remove limpia sus lanzadores" -- sh -c 'ARXY_LEVEL=2 arxy remove xterm >/dev/null && test ! -f "$APPS/arxy-xterm.desktop" && test ! -f "$APPS/arxy-uxterm.desktop"'
 else
     echo "INFO: escrituras L2 omitidas (MATRIX_WRITE2 vacio; se prueban en CI)"
 fi
