@@ -24,7 +24,12 @@ set -uo pipefail
 export ARXY_IMAGE_URL="${ARXY_IMAGE_URL:-file://${MATRIX_IMAGE:-/image.tar.zst}}"
 export ARXY_ROOT="${ARXY_ROOT:-/var/lib/arxy/root}"
 R="$ARXY_ROOT"
-APPS="$HOME/.local/share/applications"
+# Lanzadores aislados: XDG_DATA_HOME manda sobre REAL_HOME en el CLI, asi el
+# export escribe aqui venga de donde venga SUDO_USER (cierra el gotcha de los
+# FAILs en falso en host: antes miraba $HOME y escribia en /home/$SUDO_USER).
+export XDG_DATA_HOME="$(mktemp -d)" || exit 99
+chmod 777 "$XDG_DATA_HOME" # el usuario real puede no ser root (sudo -E)
+APPS="$XDG_DATA_HOME/applications"
 FAIL=0
 
 t() { # t <nombre> -- <cmd...>
@@ -127,5 +132,6 @@ t "clean --apply borra rollback" -- sh -c 'test -d "$ARXY_ROOT.old" && arxy clea
 # y falla LISTANDO lo que no se pudo borrar (contenido, no solo rc).
 t "limpia residuo en REAL_APPS" -- sh -c "ls '$APPS'/arxy-*.desktop 2>/dev/null | sort >'$SNAP_F.cur' || true; extra=\"\$(comm -13 '$SNAP_F' '$SNAP_F.cur')\"; printf '%s\n' \"\$extra\" | while IFS= read -r f; do test -z \"\$f\" || rm -f \"\$f\"; done; ls '$APPS'/arxy-*.desktop 2>/dev/null | sort >'$SNAP_F.cur' || true; rest=\"\$(comm -13 '$SNAP_F' '$SNAP_F.cur')\"; printf '%s\n' \"\$rest\"; test -z \"\$rest\""
 rm -f "$SNAP_F" "$SNAP_F.cur"
+rm -rf "$XDG_DATA_HOME"
 echo "== resultado: $([[ $FAIL -eq 0 ]] && echo TODO_OK || echo "$FAIL FALLOS")"
 exit $FAIL

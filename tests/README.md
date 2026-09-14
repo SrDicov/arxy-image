@@ -49,6 +49,10 @@ docker cp tests/matrix.sh <c>:/matrix.sh
 docker exec <c> /matrix.sh
 ```
 
+> Docker sin overlay en el daemon o contenedor sin `--privileged` no sirve
+> (la matrix monta chroot con `MATRIX_WRITE2=1` y bwrap exige namespaces).
+> En ese caso, correr en host con `sudo -E` (ver `AGENTS.md` del CLI).
+
 ## Variables
 
 | Variable | Defecto | Uso |
