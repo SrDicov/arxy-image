@@ -109,9 +109,9 @@ fi
 # Semantica de rollback: .old es siempre el setup INMEDIATO anterior
 # (el swap hace rm -rf del .old previo: no hay "primero" que rescatar).
 # Se prueba con un marcador DENTRO del rootfs + la fecha del version file
-# (el CLI la restaura desde la copia interna; regla 3 vale tras rollback).
+# (vive dentro del root desde Commit 6: el swap la rota sola).
 t "rollback restaura setup anterior" -- sh -c '
-    vf="${ARXY_ROOT%/*}/version"
+    vf="$ARXY_ROOT/var/lib/arxy/version"
     echo uno > "$ARXY_ROOT/.matrix-mark" || exit 2
     d1="$(grep -Eo "\"created_at\": \"[^\"]*\"|^date=.*" "$vf" 2>/dev/null | head -n 1 | sed "s/.*\"created_at\": \"//;s/\"\$//" | cut -d= -f2-)"; test -n "$d1" || exit 3
     arxy setup >/dev/null 2>&1 || exit 4
