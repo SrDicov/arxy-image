@@ -85,6 +85,7 @@ t "clean dry-run no toca" -- sh -c 'arxy clean | grep -q "dry-run"'
 t "quickstart guia" -- sh -c 'arxy quickstart | grep -q "siguiente paso"'
 t "doctor --fix informa" -- sh -c 'arxy doctor --fix 2>&1 | grep -q "\[OK\]\|\[FALTA\]"'
 t "doctor --json format" -- sh -c 'arxy doctor --json 2>/dev/null | grep -q "\"format\": 1"'
+t "gc --json format" -- sh -c 'arxy gc --json 2>/dev/null | grep -q "\"format\": 1" && arxy gc --json 2>/dev/null | grep -q "\"total_bytes\":" && arxy gc --json 2>/dev/null | grep -q "\"applied\": false"'
 echo "INFO: bus de sesion: ${DBUS_SESSION_BUS_ADDRESS:-ausente (esperado en contenedor)}"
 ls /run/dbus/system_bus_socket 2>/dev/null && echo "INFO: system bus visible" || echo "INFO: sin system bus (esperado en contenedor)"
 t "rollback sin .old falla limpio" -- sh -c 'rm -rf "$ARXY_ROOT.old"; ! arxy rollback 2>/dev/null'
