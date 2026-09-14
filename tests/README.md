@@ -22,6 +22,7 @@ a mano se corre en 5 distros antes de un release.
 | install/run/remove tree | escrituras pacman + scriptlets | imagen sin keyring, hooks rotos |
 | fc-list con contenido | fontconfig + fuentes | GUI sin texto |
 | clean/quickstart/doctor --fix | CLI nuevo del repo `arxy` contra imagen nueva | deriva CLI-imagen |
+| doctor --json format | `format: 1` en stdout limpio | regresión de superficie machine-readable |
 | rollback sin .old | el negativo falla limpio | `die` con traceback |
 | rollback restaura anterior | `.old` es el setup inmediato anterior (el swap destruye el primero) + el version file vuelve a describir el activo | rotacion que rescata al ancestro equivocado; `version` mintiendo tras rollback |
 | clean --apply borra rollback | `clean` recupera el espacio de `.old` | `root.old` huerfano de 1GB+ |
