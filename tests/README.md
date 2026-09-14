@@ -1,6 +1,6 @@
 # tests/ — puerta de publicacion de la imagen
 
-`matrix.sh` corre 29–34 checks según nivel y flags (rama libc,
+`matrix.sh` corre 31–36 checks según nivel y flags (rama libc,
 autodetección L2 y chroot `MATRIX_WRITE2=1` son condicionales) y falla
 el build si algo rompe. El CI la ejecuta en cada build (Arch privilegiado, `MATRIX_WRITE2=1`);
 a mano se corre en 5 distros antes de un release.
@@ -23,6 +23,7 @@ a mano se corre en 5 distros antes de un release.
 | fc-list con contenido | fontconfig + fuentes | GUI sin texto |
 | clean/quickstart/doctor --fix | CLI nuevo del repo `arxy` contra imagen nueva | deriva CLI-imagen |
 | doctor --json format | `format: 1` en stdout limpio | regresión de superficie machine-readable |
+| gc --json format | `format: 1` + `total_bytes` + `applied: false` en stdout limpio | regresión de superficie machine-readable de `gc` |
 
 La matriz exige el CLI nuevo del repo `arxy` (en docker/CI se copia a
 `/usr/local/bin/arxy`): con un `arxy` instalado obsoleto (sin `--json`),

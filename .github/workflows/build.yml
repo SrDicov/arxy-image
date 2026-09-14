@@ -43,8 +43,8 @@ jobs:
         # export/unexport resuelven REAL_APPS por si mismos.
         env:
           HOME: /root
-        # tests/matrix.sh: 25+ assertions de contenido sobre el tarball
-        # recien construido. Si falla, el release no se toca.
+        # tests/matrix.sh: 31–36 checks con assertions de contenido
+        # sobre el tarball recien construido. Si falla, el release no se toca.
         run: |
           pacman -Sy --noconfirm --needed bubblewrap file
           curl -fsSL https://raw.githubusercontent.com/SrDicov/arxy/main/src/arxy -o /usr/local/bin/arxy
