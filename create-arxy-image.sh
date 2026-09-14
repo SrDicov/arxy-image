@@ -4,8 +4,8 @@
 # imagen arxy + su sha256. Requiere root: el rootfs contiene ficheros 0700
 # de root (keyring pacman, gshadow) que deben ir DENTRO de la imagen.
 #
-#   PROFILE=arxy sudo ./create-arch-bootstrap.sh   # paso 1
-#   PROFILE=arxy sudo ./create-arxy-image.sh       # paso 2 (este script)
+#   sudo -n PROFILE=arxy ./create-arch-bootstrap.sh   # paso 1
+#   sudo -n PROFILE=arxy ./create-arxy-image.sh       # paso 2 (este script)
 #
 # El tarball lo publica el CI en el release 'latest' de arxy-image
 # (ver .github/workflows/build.yml).
@@ -43,7 +43,7 @@ bootstrap="${script_dir}/root.x86_64"
 tarball="${script_dir}/${ARXY_IMAGE_TARBALL:-arxy-rootfs-x86_64.tar.zst}"
 
 # --- cordura: esto debe ser un rootfs arxy, no un conty
-[ -d "${bootstrap}" ] || { echo "Missing ${bootstrap}: run PROFILE=arxy sudo ./create-arch-bootstrap.sh first"; exit 1; }
+[ -d "${bootstrap}" ] || { echo "Missing ${bootstrap}: run sudo -n PROFILE=arxy ./create-arch-bootstrap.sh first"; exit 1; }
 [ -x "${bootstrap}/usr/bin/bash" ] || { echo "${bootstrap} has no /usr/bin/bash"; exit 1; }
 [ -x "${bootstrap}/usr/bin/pacman" ] || { echo "${bootstrap} has no /usr/bin/pacman"; exit 1; }
 [ -f "${bootstrap}/etc/arch-release" ] || { echo "${bootstrap} has no /etc/arch-release"; exit 1; }

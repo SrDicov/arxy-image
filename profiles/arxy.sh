@@ -7,9 +7,9 @@
 # sin X server propio (usa el del host via sockets), sin toolchain.
 # Todo lo demas se instala despues con 'arxy install' dentro del subsistema.
 #
-# Usage:
-#   PROFILE=arxy sudo ./create-arch-bootstrap.sh   # step 1, root, ~10GB libres
-#   PROFILE=arxy ./create-arxy-image.sh            # step 2, sin root -> tarball
+# Usage (PROFILE= va TRAS sudo: sudo limpia el entorno; ver README.md):
+#   sudo -n PROFILE=arxy ./create-arch-bootstrap.sh   # step 1, root, ~10GB libres
+#   sudo -n PROFILE=arxy ./create-arxy-image.sh       # step 2, root -> tarball
 #
 # El tarball resultante lo publica el CI en el release 'latest' de
 # arxy-image (URL+`.sha256` que 'arxy setup' consume directamente).
