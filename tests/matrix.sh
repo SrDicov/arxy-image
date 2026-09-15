@@ -22,7 +22,17 @@
 set -uo pipefail
 
 export ARXY_IMAGE_URL="${ARXY_IMAGE_URL:-file://${MATRIX_IMAGE:-/image.tar.zst}}"
-export ARXY_ROOT="${ARXY_ROOT:-/var/lib/arxy/root}"
+if [[ -z "${ARXY_ROOT+set}" ]]; then
+    export ARXY_ROOT=/var/lib/arxy/root
+    _MATRIX_DEFAULT_ROOT=1
+fi
+# M16: el default es el rootfs PRODUCTIVO; fuera de contenedor, correr
+# sin ARXY_ROOT aislado haria setup/rollback/clean --apply contra el
+# sistema real. Misma guarda que test-atomic-crash.sh del CLI.
+if [[ -n "${_MATRIX_DEFAULT_ROOT:-}" && ! -e /.dockerenv && ! -e /run/.containerenv ]]; then
+    echo "FAIL: ARXY_ROOT real sin aislar fuera de contenedor (pasa ARXY_ROOT=/var/lib/arxy-mxt ...)" >&2
+    exit 1
+fi
 R="$ARXY_ROOT"
 # Lanzadores aislados: XDG_DATA_HOME manda sobre REAL_HOME en el CLI, asi el
 # export escribe aqui venga de donde venga SUDO_USER (cierra el gotcha de los
