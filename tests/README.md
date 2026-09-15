@@ -11,7 +11,7 @@ a mano se corre en 5 distros antes de un release.
 | Check | Que prueba | Bug que cazaria |
 |---|---|---|
 | artefacto .sha256 hermano (solo si existe) | `sha256sum -c` pasa | tarball truncado llegando a 30 checks que fallarian en masa |
-| artefacto .minisig hermano (solo si existe) | 2 lineas + firma base64 en linea 2 | release sin firma o corrupta pasando el gate de presencia |
+| artefacto .minisig hermano (solo si existe) | comentario untrusted + firma base64 (+ bloque trusted opcional de 2 lineas) | release sin firma o corrupta pasando el gate de presencia |
 | doctor reporta nivel | bwrap/userns detectados | entorno roto silencioso |
 | setup file:// | descarga+verifica+extrae+`-Sy` atomicos | tarball corrupto publicado |
 | setup deja rootfs valido | `pacman` ejecutable + `arch-release` tras setup | setup que reporta OK sin rootfs |

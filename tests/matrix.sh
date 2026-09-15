@@ -74,7 +74,9 @@ if [[ -f "$_IMG" ]]; then
         echo "INFO: sin hermano .sha256 (solo CI pre-publish lo trae)"
     fi
     if [[ -f "$_IMG.minisig" ]]; then
-        t "artefacto .minisig bien formado" -- env IMG="$_IMG" sh -c 'test "$(grep -c "" "$IMG.minisig")" -eq 2 && sed -n "2p" "$IMG.minisig" | grep -qE "^[A-Za-z0-9+/]+={0,2}$"'
+        # Formato real minisign: 2 lineas (untrusted+sig) o 4 (mas bloque
+        # trusted timestamp). Pinneado contra salida real del binario.
+        t "artefacto .minisig bien formado" -- env IMG="$_IMG" sh -c 'head -n 1 "$IMG.minisig" | grep -q "^untrusted comment: signature" && sed -n "2p" "$IMG.minisig" | grep -qE "^[A-Za-z0-9+/]+={0,2}$" && { test "$(grep -c "" "$IMG.minisig")" -eq 2 || { test "$(grep -c "" "$IMG.minisig")" -eq 4 && sed -n "3p" "$IMG.minisig" | grep -q "^trusted comment:" && sed -n "4p" "$IMG.minisig" | grep -qE "^[A-Za-z0-9+/]+={0,2}$"; }; }'
     else
         echo "INFO: sin hermano .minisig (solo CI pre-publish lo trae)"
     fi
