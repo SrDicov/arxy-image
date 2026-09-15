@@ -19,9 +19,18 @@ desempaquetado, ~128MB en `arxy-rootfs-x86_64.tar.zst`.
 
 El CI la reconstruye cada viernes + a demanda y publica en el release
 **[`latest`](https://github.com/SrDicov/arxy-image/releases/tag/latest)**
-(`arxy-rootfs-x86_64.tar.zst` + `.sha256`). `arxy setup` descarga de ahí y
-verifica contra el `.sha256` automáticamente. Cada build corre
+(`arxy-rootfs-x86_64.tar.zst` + `.sha256` + `.minisig`). `arxy setup`
+descarga de ahí, verifica contra el `.sha256` y valida la firma minisign
+con `config/arxy.pub` (política `ARXY_SIGNATURE_POLICY`). Cada build corre
 `tests/matrix.sh` como puerta: si falla, no se publica.
+
+## Firmas (minisign, Ed25519)
+
+El tarball se firma en CI con la secreta del repo (`Settings → Secrets →
+`MINISIGN_SECRET`, contenido del `arxy.sec` generado con `minisign -G -W`).
+La pública vive en el CLI (`arxy/config/arxy.pub`, Key ID `1D21DD5964A3A1B0`).
+Rotar = generar otro par, actualizar secret + `arxy.pub` juntos (van en
+commits separados por repo, nunca mezclar).
 
 ## Reconstruir a mano (requiere root + ~10GB libres, vale en Void con sudo)
 

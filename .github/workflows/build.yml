@@ -36,6 +36,20 @@ jobs:
       - name: Pack image tarball
         run: PROFILE=arxy ./create-arxy-image.sh
 
+      - name: Sign tarball (minisign)
+        # secrets.* sí vale en `if` (el contexto env de step, no).
+        # Sin secret (forks): se salta y el publish aborta abajo.
+        if: ${{ secrets.MINISIGN_SECRET != '' }}
+        env:
+          MINISIGN_SECRET: ${{ secrets.MINISIGN_SECRET }}
+        run: |
+          pacman -S --noconfirm --needed minisign
+          printf '%s\n' "$MINISIGN_SECRET" > /tmp/arxy.sec
+          chmod 600 /tmp/arxy.sec
+          minisign -S -s /tmp/arxy.sec -m arxy-rootfs-x86_64.tar.zst \
+            -x arxy-rootfs-x86_64.tar.zst.minisig
+          shred -u /tmp/arxy.sec
+
       - name: Matrix (puerta de publicacion)
         # Actions mete HOME=/github/home pero el CLI escribe lanzadores en
         # el home real de root (REAL_HOME, e04a9b6): sin esto el check
@@ -61,6 +75,7 @@ jobs:
           gh release view "$tag" -R "$repo" >/dev/null 2>&1 || \
             gh release create "$tag" -R "$repo" --title "latest" \
               --notes "Imagen arxy actual (construida por CI). 'arxy setup' descarga de aqui."
+          test -f arxy-rootfs-x86_64.tar.zst.minisig || { echo "sin .minisig: release sin firma, abortando"; exit 1; }
           gh release upload "$tag" -R "$repo" --clobber \
-            arxy-rootfs-x86_64.tar.zst arxy-rootfs-x86_64.tar.zst.sha256
+            arxy-rootfs-x86_64.tar.zst arxy-rootfs-x86_64.tar.zst.sha256 arxy-rootfs-x86_64.tar.zst.minisig
           gh release view "$tag" -R "$repo" --json assets --jq '.assets[].name'
