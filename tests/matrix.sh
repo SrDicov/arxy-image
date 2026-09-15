@@ -97,7 +97,7 @@ t "L2: export contenido" -- sh -c "grep -q '^Exec=arxy run /usr/bin/true' '$APPS
 t "L2: unexport" -- sh -c "arxy unexport arxy-test && test ! -f '$APPS/arxy-arxy-test.desktop'"
 t "install (escritura)" -- arxy install tree
 t "run instalado" -- sh -c 'arxy run tree --version | grep -qE "tree v[0-9]"'
-t "remove" -- arxy remove tree
+t "remove" -- sh -c 'arxy remove tree >/dev/null && ! arxy list 2>/dev/null | grep -q "^tree "'
 t "fc-list con contenido" -- sh -c 'arxy run /usr/bin/fc-list | grep -q "\.ttf"'
 t "clean dry-run no toca" -- sh -c 'arxy clean | grep -q "dry-run"'
 t "quickstart guia" -- sh -c 'arxy quickstart | grep -q "siguiente paso"'
@@ -106,7 +106,7 @@ t "doctor --json format" -- sh -c 'arxy doctor --json 2>/dev/null | grep -q "\"f
 t "gc --json format" -- sh -c 'arxy gc --json 2>/dev/null | grep -q "\"format\": 1" && arxy gc --json 2>/dev/null | grep -q "\"total_bytes\":" && arxy gc --json 2>/dev/null | grep -q "\"applied\": false"'
 echo "INFO: bus de sesion: ${DBUS_SESSION_BUS_ADDRESS:-ausente (esperado en contenedor)}"
 ls /run/dbus/system_bus_socket 2>/dev/null && echo "INFO: system bus visible" || echo "INFO: sin system bus (esperado en contenedor)"
-t "rollback sin .old falla limpio" -- sh -c 'rm -rf "$ARXY_ROOT.old"; ! arxy rollback 2>/dev/null'
+t "rollback sin .old falla limpio" -- sh -c 'rm -rf "$ARXY_ROOT.old"; arxy rollback 2>&1 | grep -qi "no hay rollback pendiente"'
 if [[ "$LEVEL" == "nivel 1" ]]; then
     # Autodeteccion de nivel 2 con bwrap roto (solo lectura).
     mkdir -p /tmp/nobwrap
@@ -120,7 +120,7 @@ else
 fi
 if [[ -n "${MATRIX_WRITE2:-}" ]]; then
     # Escrituras en nivel 2 (chroot con mounts): exige privilegios.
-    t "L2: install/remove (chroot)" -- sh -c 'ARXY_LEVEL=2 arxy install tree && ARXY_LEVEL=2 arxy run tree --version | grep -qE "tree v[0-9]" && ARXY_LEVEL=2 arxy remove tree'
+    t "L2: install/remove (chroot)" -- sh -c 'ARXY_LEVEL=2 arxy install tree && ARXY_LEVEL=2 arxy run tree --version | grep -qE "tree v[0-9]" && ARXY_LEVEL=2 arxy remove tree >/dev/null && ! ARXY_LEVEL=2 arxy list 2>/dev/null | grep -q "^tree "'
     # Export en L2 tras escritura vía chroot: el lanzador debe crearse con
     # contenido válido aunque el rootfs se haya mutado sin namespaces.
     # E2E con paquete real (xterm) más abajo: install en chroot + export por
