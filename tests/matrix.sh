@@ -52,6 +52,11 @@ t() { # t <nombre> -- <cmd...>
 
 echo "== host: $(cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME) / $(uname -m)"
 echo "== imagen: $ARXY_IMAGE_URL"
+# M17: sin esto, bajo sudo-host secure_path impone el arxy instalado
+# (obsoleto) y LEVEL/checks fallan en falso atribuidos a la imagen.
+command -v arxy >/dev/null 2>&1 || { echo "FAIL: sin arxy en PATH (sudo-host: sudo -E env \"PATH=<staging>/bin:...\" ...)" >&2; exit 1; }
+arxy version >/dev/null 2>&1 || { echo "FAIL: arxy en PATH no responde (¿instalado obsoleto? usa el CLI fresco)" >&2; exit 1; }
+echo "INFO: cli: $(command -v arxy) ($(arxy version 2>/dev/null | head -n 1))"
 t "doctor reporta nivel" -- sh -c 'arxy doctor | grep -q "nivel [12]"'
 LEVEL="$(arxy doctor 2>/dev/null | grep -o 'nivel [12]' | head -1)"
 echo "INFO: detectado $LEVEL"
