@@ -37,12 +37,12 @@ jobs:
         run: PROFILE=arxy ./create-arxy-image.sh
 
       - name: Sign tarball (minisign)
-        # secrets.* sí vale en `if` (el contexto env de step, no).
-        # Sin secret (forks): se salta y el publish aborta abajo.
-        if: ${{ secrets.MINISIGN_SECRET != '' }}
+        # Sin `if:` con secrets (GitHub lo rechaza: fichero invalido, 0s).
+        # El gate va en shell; sin secret el publish aborta abajo igual.
         env:
           MINISIGN_SECRET: ${{ secrets.MINISIGN_SECRET }}
         run: |
+          [[ -n "${MINISIGN_SECRET:-}" ]] || { echo "sin MINISIGN_SECRET: salto firma (el publish abortara)"; exit 0; }
           pacman -S --noconfirm --needed minisign
           printf '%s\n' "$MINISIGN_SECRET" > /tmp/arxy.sec
           chmod 600 /tmp/arxy.sec
