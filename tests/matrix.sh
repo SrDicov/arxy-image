@@ -19,6 +19,11 @@
 # LIMITE conocido: los containers son siempre limpios (sin sys-conf ni
 # user-conf), asi que esto NO caza bugs de precedencia env>user>sys.
 # Esos se prueban en host real con conf presente (ver AGENTS.md del CLI).
+# LIMITE firma (Q3-H8): file:// omite minisign por diseno
+# (sig_should_verify solo verifica http(s) sin pin). Esta puerta pinea
+# presencia+formato de los hermanos .sha256/.minisig cuando existen
+# (CI pre-publish); el e2e https+minisign no tiene puerta automatica:
+# la logica de verificacion vive en test-signature.sh del repo arxy.
 set -uo pipefail
 
 export ARXY_IMAGE_URL="${ARXY_IMAGE_URL:-file://${MATRIX_IMAGE:-/image.tar.zst}}"
@@ -57,6 +62,23 @@ echo "== imagen: $ARXY_IMAGE_URL"
 command -v arxy >/dev/null 2>&1 || { echo "FAIL: sin arxy en PATH (sudo-host: sudo -E env \"PATH=<staging>/bin:...\" ...)" >&2; exit 1; }
 arxy version >/dev/null 2>&1 || { echo "FAIL: arxy en PATH no responde (¿instalado obsoleto? usa el CLI fresco)" >&2; exit 1; }
 echo "INFO: cli: $(command -v arxy) ($(arxy version 2>/dev/null | head -n 1))"
+# Q3-H8: el publish exigia el .minisig (presencia) pero nada lo verificaba:
+# la matrix corria file:// (ciega a firmas) ANTES de firmar. Si el tarball
+# trae hermanos .sha256/.minisig (CI pre-publish), se pinean con contenido;
+# si no (docker manual: solo tarball), INFO y se sigue.
+_IMG="${MATRIX_IMAGE:-/image.tar.zst}"
+if [[ -f "$_IMG" ]]; then
+    if [[ -f "$_IMG.sha256" ]]; then
+        t "artefacto .sha256 coincide con tarball" -- env IMG="$_IMG" sh -c 'cd "$(dirname "$IMG")" && sha256sum -c "$(basename "$IMG").sha256" 2>&1 | grep -q ": OK$"'
+    else
+        echo "INFO: sin hermano .sha256 (solo CI pre-publish lo trae)"
+    fi
+    if [[ -f "$_IMG.minisig" ]]; then
+        t "artefacto .minisig bien formado" -- env IMG="$_IMG" sh -c 'test "$(grep -c "" "$IMG.minisig")" -eq 2 && sed -n "2p" "$IMG.minisig" | grep -qE "^[A-Za-z0-9+/]+={0,2}$"'
+    else
+        echo "INFO: sin hermano .minisig (solo CI pre-publish lo trae)"
+    fi
+fi
 t "doctor reporta nivel" -- sh -c 'arxy doctor | grep -q "nivel [12]"'
 LEVEL="$(arxy doctor 2>/dev/null | grep -o 'nivel [12]' | head -1)"
 echo "INFO: detectado $LEVEL"

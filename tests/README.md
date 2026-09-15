@@ -1,7 +1,8 @@
 # tests/ — puerta de publicacion de la imagen
 
-`matrix.sh` corre 33–41 checks según nivel y flags (rama libc,
-autodetección L2 y chroot `MATRIX_WRITE2=1` son condicionales) y falla
+`matrix.sh` corre 33–43 checks según nivel y flags (rama libc,
+autodetección L2, chroot `MATRIX_WRITE2=1` y artefactos hermanos
+`.sha256`/`.minisig` son condicionales) y falla
 el build si algo rompe. El CI la ejecuta en cada build (Arch privilegiado, `MATRIX_WRITE2=1`);
 a mano se corre en 5 distros antes de un release.
 
@@ -9,6 +10,8 @@ a mano se corre en 5 distros antes de un release.
 
 | Check | Que prueba | Bug que cazaria |
 |---|---|---|
+| artefacto .sha256 hermano (solo si existe) | `sha256sum -c` pasa | tarball truncado llegando a 30 checks que fallarian en masa |
+| artefacto .minisig hermano (solo si existe) | 2 lineas + firma base64 en linea 2 | release sin firma o corrupta pasando el gate de presencia |
 | doctor reporta nivel | bwrap/userns detectados | entorno roto silencioso |
 | setup file:// | descarga+verifica+extrae+`-Sy` atomicos | tarball corrupto publicado |
 | setup deja rootfs valido | `pacman` ejecutable + `arch-release` tras setup | setup que reporta OK sin rootfs |
@@ -75,3 +78,8 @@ Cambios de tamaño con número medido (antes/después en el commit).
 Los containers son siempre limpios (sin sys-conf ni user-conf): esto no
 caza bugs de precedencia `env > user > sys`. Esos se prueban en host real
 con conf presente (ver AGENTS.md del repo `arxy`).
+
+La matrix sobre `file://` nunca ejercita la verificacion minisign
+(`sig_should_verify` la omite por diseno): solo pinea los artefactos
+hermanos cuando existen (CI pre-publish). La logica de verificacion se
+prueba en `test-signature.sh` del repo `arxy` (job `sig-vector`).

@@ -125,4 +125,4 @@ ls -lh "${tarball}" "${tarball}.sha256"
 cat "${tarball}.sha256"
 echo
 echo "Next: upload ${tarball##*/} (+ .sha256) to the 'latest' release of arxy-image"
-echo "('arxy setup' lo descarga de ahi y lo verifica contra el .sha256 solo)."
+echo "(CI firma .minisig despues; 'arxy setup' verifica .sha256 siempre y minisign en http(s) sin pin)."
