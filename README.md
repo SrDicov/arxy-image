@@ -53,9 +53,14 @@ perfil `arxy`.
 | `profiles/arxy.sh` | perfil: paquetes, locales, mirrorlist, compresión |
 | `create-arch-bootstrap.sh` | paso 1: bootstrap Arch → `root.x86_64/` |
 | `create-arxy-image.sh` | paso 2: `root.x86_64/` → tarball + sha256 |
-| `tests/matrix.sh` | puerta de publicación: 31–36 checks según nivel y flags |
+| `tests/matrix.sh` | puerta de publicación: 33–43 checks según nivel y flags |
 | `tests/README.md` | qué asserta cada check + matrix manual 5 distros |
 | `.github/workflows/build.yml` | CI: build semanal + matrix + publicación en `latest` |
+
+## Cambios
+
+Sin CHANGELOG propio (veredicto Q3-H7): el historial vive en los mensajes
+de commit; lo que afecta al CLI se cita en `arxy/CHANGELOG.md`.
 
 ## Licencia
 

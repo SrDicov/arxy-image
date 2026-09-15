@@ -58,7 +58,9 @@ docker exec <c> /matrix.sh
 
 > Docker sin overlay en el daemon o contenedor sin `--privileged` no sirve
 > (la matrix monta chroot con `MATRIX_WRITE2=1` y bwrap exige namespaces).
-> En ese caso, correr en host con `sudo -E` (ver `AGENTS.md` del CLI).
+> En ese caso, correr en host con staging sin espacios y la forma completa
+> `sudo -E env "PATH=<staging>/bin:..."` (con `sudo -E` a secas, secure_path
+> impone el `arxy` instalado obsoleto y `doctor --json` falla en falso).
 
 ## Variables
 
@@ -78,6 +80,10 @@ Cambios de tamaño con número medido (antes/después en el commit).
 Los containers son siempre limpios (sin sys-conf ni user-conf): esto no
 caza bugs de precedencia `env > user > sys`. Esos se prueban en host real
 con conf presente (ver AGENTS.md del repo `arxy`).
+
+`create-arch-bootstrap.sh`/`create-arxy-image.sh` corren como root sin
+`set -uo pipefail` a proposito (scripts de build cortos con `|| exit`
+explicito en cada paso critico; la regla pipefail vive en el repo CLI).
 
 La matrix sobre `file://` nunca ejercita la verificacion minisign
 (`sig_should_verify` la omite por diseno): solo pinea los artefactos
