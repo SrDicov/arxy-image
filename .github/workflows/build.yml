@@ -43,7 +43,7 @@ jobs:
           MINISIGN_SECRET: ${{ secrets.MINISIGN_SECRET }}
         run: |
           [[ -n "${MINISIGN_SECRET:-}" ]] || { echo "sin MINISIGN_SECRET: salto firma (el publish abortara)"; exit 0; }
-          pacman -S --noconfirm --needed minisign
+          pacman -Sy --noconfirm --needed minisign
           printf '%s\n' "$MINISIGN_SECRET" > /tmp/arxy.sec
           chmod 600 /tmp/arxy.sec
           minisign -S -s /tmp/arxy.sec -m arxy-rootfs-x86_64.tar.zst \
