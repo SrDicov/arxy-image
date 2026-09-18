@@ -1,4 +1,5 @@
 # shellcheck shell=bash disable=2034
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Conty profile: arxy
 #
 # Goal: rootfs Arch MINIMO para el subsistema arxy (sin sandbox, sin FUSE).

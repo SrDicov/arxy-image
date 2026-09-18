@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # Empaqueta root.x86_64/ (construido con PROFILE=arxy) en el tarball de la
 # imagen arxy + su sha256. Requiere root: el rootfs contiene ficheros 0700
@@ -67,8 +68,8 @@ fi
 cd "${script_dir}" || exit 1
 
 # tidy_rootfs: quita peso muerto MEDIDO (deltas sobre 946MB pristine).
-# Orden: corre tras todas las instalaciones (los rm van ANTES de empaquetar;
-# ver Fase 2). strip: NO, Arch ya distribuye strippeado (2139 ficheros, -0MB).
+# Orden: corre tras todas las instalaciones (los rm van ANTES de empaquetar).
+# strip: NO, Arch ya distribuye strippeado (2139 ficheros, -0MB).
 # dedup en build: NO (2MB en base; el auto-dedup de runtime lo cubre).
 tidy_rootfs() { # <bootstrap>
 	: "${1:?tidy_rootfs requiere dir}"

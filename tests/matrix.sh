@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # matrix.sh — puerta de publicacion de la imagen arxy.
 # Hogar: repo arxy-image, tests/matrix.sh. El CI (build.yml) la corre contra
 # el tarball recien construido; a mano se corre en N distros con docker.
@@ -19,7 +20,7 @@
 # LIMITE conocido: los containers son siempre limpios (sin sys-conf ni
 # user-conf), asi que esto NO caza bugs de precedencia env>user>sys.
 # Esos se prueban en host real con conf presente (ver AGENTS.md del CLI).
-# LIMITE firma (Q3-H8): file:// omite minisign por diseno
+# LIMITE firma: file:// omite minisign por diseno
 # (sig_should_verify solo verifica http(s) sin pin). Esta puerta pinea
 # presencia+formato de los hermanos .sha256/.minisig cuando existen
 # (CI pre-publish); el e2e https+minisign no tiene puerta automatica:
@@ -31,7 +32,7 @@ if [[ -z "${ARXY_ROOT+set}" ]]; then
     export ARXY_ROOT=/var/lib/arxy/root
     _MATRIX_DEFAULT_ROOT=1
 fi
-# M16: el default es el rootfs PRODUCTIVO; fuera de contenedor, correr
+# El default es el rootfs PRODUCTIVO; fuera de contenedor, correr
 # sin ARXY_ROOT aislado haria setup/rollback/clean --apply contra el
 # sistema real. Misma guarda que test-atomic-crash.sh del CLI.
 if [[ -n "${_MATRIX_DEFAULT_ROOT:-}" && ! -e /.dockerenv && ! -e /run/.containerenv ]]; then
@@ -57,12 +58,12 @@ t() { # t <nombre> -- <cmd...>
 
 echo "== host: $(cat /etc/os-release 2>/dev/null | grep -m1 PRETTY_NAME) / $(uname -m)"
 echo "== imagen: $ARXY_IMAGE_URL"
-# M17: sin esto, bajo sudo-host secure_path impone el arxy instalado
+# Sin esto, bajo sudo-host secure_path impone el arxy instalado
 # (obsoleto) y LEVEL/checks fallan en falso atribuidos a la imagen.
 command -v arxy >/dev/null 2>&1 || { echo "FAIL: sin arxy en PATH (sudo-host: sudo -E env \"PATH=<staging>/bin:...\" ...)" >&2; exit 1; }
 arxy version >/dev/null 2>&1 || { echo "FAIL: arxy en PATH no responde (¿instalado obsoleto? usa el CLI fresco)" >&2; exit 1; }
 echo "INFO: cli: $(command -v arxy) ($(arxy version 2>/dev/null | head -n 1))"
-# Q3-H8: el publish exigia el .minisig (presencia) pero nada lo verificaba:
+# El publish exigia el .minisig (presencia) pero nada lo verificaba:
 # la matrix corria file:// (ciega a firmas) ANTES de firmar. Si el tarball
 # trae hermanos .sha256/.minisig (CI pre-publish), se pinean con contenido;
 # si no (docker manual: solo tarball), INFO y se sigue.
@@ -114,7 +115,7 @@ t "export sintetico" -- sh -c "arxy export --all >/dev/null && test -f '$APPS/ar
 t "export contenido" -- sh -c "grep -q '^Exec=arxy run /usr/bin/true' '$APPS/arxy-arxy-test.desktop' && grep -q '^X-Arxy-Pkg=' '$APPS/arxy-arxy-test.desktop'"
 t "unexport" -- sh -c "arxy unexport arxy-test && test ! -f '$APPS/arxy-arxy-test.desktop'"
 # Export en nivel 2 forzado (--all usa find directo sobre el rootfs, sin
-# bwrap). Gap histórico sin cobertura (validado a mano en 6.5.5): si L2
+# bwrap). Gap histórico sin cobertura (validado a mano): si L2
 # regresa, aquí se caza. Verificado que el contenido se reescribe igual.
 t "L2: export --all" -- sh -c "ARXY_LEVEL=2 arxy export --all >/dev/null && test -f '$APPS/arxy-arxy-test.desktop'"
 t "L2: export contenido" -- sh -c "grep -q '^Exec=arxy run /usr/bin/true' '$APPS/arxy-arxy-test.desktop' && grep -q '^X-Arxy-Pkg=' '$APPS/arxy-arxy-test.desktop'"
@@ -154,7 +155,7 @@ if [[ -n "${MATRIX_WRITE2:-}" ]]; then
     t "L2: unexport tras install (chroot)" -- sh -c "arxy unexport arxy-test && test ! -f '$APPS/arxy-arxy-test.desktop'"
     # E2E: paquete pacman REAL con .desktop instalado en L2 (chroot) y
     # exportado por nombre de paquete (ejercita pkg_desktops con rutas
-    # prefijadas por --root, el punto ciego del ciclo 6.5.5).
+    # prefijadas por --root, el punto ciego historico).
     # Fixture: xterm (extra, ~1MB+libs X ya casi todas en la mini, sin gtk3;
     # trae xterm.desktop+uxterm.desktop limpios — feh se descarto: su
     # .desktop lleva NoDisplay=true y export lo salta a proposito).
@@ -167,7 +168,7 @@ fi
 # Semantica de rollback: .old es siempre el setup INMEDIATO anterior
 # (el swap hace rm -rf del .old previo: no hay "primero" que rescatar).
 # Se prueba con un marcador DENTRO del rootfs + la fecha del version file
-# (vive dentro del root desde Commit 6: el swap la rota sola).
+# (vive dentro del root: el swap la rota sola).
 t "rollback restaura setup anterior" -- sh -c '
     vf="$ARXY_ROOT/var/lib/arxy/version"
     echo uno > "$ARXY_ROOT/.matrix-mark" || exit 2

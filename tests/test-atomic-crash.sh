@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # test-atomic-crash.sh — setup interrumpido deja estado recuperable.
-# Fase 0: red mínima para el ciclo de vida atómico (Fase 3). Solo asserts
+# Red mínima para el ciclo de vida atómico. Solo asserts
 # de CONTENIDO (grep), nunca solo rc.
 # Requiere: root, ~1GB libre en /tmp, red (el -Sy final del setup bueno).
 # Aísla todo en /tmp/arxy-crash: NUNCA toca /var/lib/arxy (guarda explícita).
@@ -72,7 +73,7 @@ else
     t "T2 rootfs viejo responde" -- sh -c 'arxy run /usr/bin/true'
     t "T2 rootfs viejo lista contenido" -- sh -c 'arxy list | grep -q "^pacman "'
     if ls -d "$R".new.* >/dev/null 2>&1; then
-        echo "INFO: staging huerfano tras kill (gap Fase 3, no falla): $(ls -d "$R".new.* | tr '\n' ' ')"
+        echo "INFO: staging huerfano tras kill (no falla): $(ls -d "$R".new.* | tr '\n' ' ')"
     fi
 fi
 SPID=""

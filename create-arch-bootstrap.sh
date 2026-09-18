@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 
 # Dependencies: curl tar gzip grep coreutils zstd sed
 # Root rights are required
