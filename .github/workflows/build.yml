@@ -61,7 +61,7 @@ jobs:
         # sobre el tarball recien construido. Si falla, el release no se toca.
         run: |
           pacman -Sy --noconfirm --needed bubblewrap file
-          curl -fsSL https://raw.githubusercontent.com/SrDicov/arxy/main/src/arxy -o /usr/local/bin/arxy
+          curl -fsSL https://raw.githubusercontent.com/SrDicov/arxy/v0.5.0/src/arxy -o /usr/local/bin/arxy
           chmod +x /usr/local/bin/arxy
           MATRIX_IMAGE="$PWD/arxy-rootfs-x86_64.tar.zst" MATRIX_WRITE2=1 ./tests/matrix.sh
 

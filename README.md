@@ -22,7 +22,9 @@ El CI la reconstruye cada viernes + a demanda y publica en el release
 (`arxy-rootfs-x86_64.tar.zst` + `.sha256` + `.minisig`). `arxy setup`
 descarga de ahí, verifica contra el `.sha256` y valida la firma minisign
 con `config/arxy.pub` (política `ARXY_SIGNATURE_POLICY`). Cada build corre
-`tests/matrix.sh` como puerta: si falla, no se publica.
+`tests/matrix.sh` como puerta: si falla, no se publica. **Nota de CI:** el script
+de matrix usa el CLI de arxy pineado por SHA en `build.yml`; al publicar un release
+de arxy, hay que actualizar este SHA en el workflow para sincronizarlos.
 
 ## Firmas (minisign, Ed25519)
 
