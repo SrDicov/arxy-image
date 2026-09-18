@@ -1,7 +1,6 @@
 # arxy-image — construcción de la imagen mínima de arxy
 
 [![build-image](https://github.com/SrDicov/arxy-image/actions/workflows/build.yml/badge.svg)](https://github.com/SrDicov/arxy-image/actions/workflows/build.yml)
-![license](https://img.shields.io/badge/license-MIT-green)
 
 Construye el rootfs Arch mínimo que consume el CLI
 [**arxy**](https://github.com/SrDicov/arxy): ~140 paquetes, ~490MB
@@ -23,7 +22,7 @@ El CI la reconstruye cada viernes + a demanda y publica en el release
 descarga de ahí, verifica contra el `.sha256` y valida la firma minisign
 con `config/arxy.pub` (política `ARXY_SIGNATURE_POLICY`). Cada build corre
 `tests/matrix.sh` como puerta: si falla, no se publica. **Nota de CI:** el script
-de matrix usa el CLI de arxy pineado por SHA en `build.yml`; al publicar un release
+de matrix usa el CLI de arxy pineado por tag en `build.yml`; al publicar un release
 de arxy, hay que actualizar este SHA en el workflow para sincronizarlos.
 
 ## Firmas (minisign, Ed25519)
@@ -61,9 +60,9 @@ perfil `arxy`.
 
 ## Cambios
 
-Sin CHANGELOG propio (veredicto Q3-H7): el historial vive en los mensajes
+Sin CHANGELOG propio: el historial vive en los mensajes
 de commit; lo que afecta al CLI se cita en `arxy/CHANGELOG.md`.
 
 ## Licencia
 
-MIT — ver [LICENSE](LICENSE).
+GPL-3.0-or-later — ver [LICENSE](LICENSE).
