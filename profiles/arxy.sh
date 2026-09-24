@@ -112,17 +112,6 @@ Server = https://mirror.pseudoform.org/$repo/os/$arch
 Server = https://mirror.cyberbits.eu/archlinux/$repo/os/$arch
 '
 
-# Sin utils squashfs/dwarfs: la imagen arxy es un tarball extraido, no FUSE.
-USE_SYS_UTILS=0
-SQUASHFS_COMPRESSOR="zstd"
-SQUASHFS_COMPRESSOR_ARGUMENTS=(-b 1M -comp "${SQUASHFS_COMPRESSOR}" -Xcompression-level 19)
-USE_DWARFS=
-DWARFS_COMPRESSOR_ARGUMENTS=(
-	-l7 -C zstd:level=19 --metadata-compression null
-	-S 22 -B 1 --order nilsimsa
-	-W 12 -w 4 --no-history-timestamps --no-create-timestamp
-)
-
 DOWNLOAD_PROXY=
 
 BOOTSTRAP_DOWNLOAD_URLS=(
@@ -134,5 +123,3 @@ BOOTSTRAP_DOWNLOAD_URLS=(
 )
 
 BOOTSTRAP_SHA256SUM_FILE_URL='https://umea.mirror.pkgbuild.com/iso/latest/sha256sums.txt'
-
-USE_EXISTING_IMAGE=

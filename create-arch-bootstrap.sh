@@ -23,15 +23,12 @@ if [ "${PROFILE_STATUS:-stable}" = "planned" ]; then
 	exit 1
 fi
 
-check_command_available() {
-	for cmd in "$@"; do
-		if ! command -v "$cmd" >&-; then
-			echo "$cmd is required!"
-			exit 1
-		fi
-	done
-}
-check_command_available curl gzip grep sha256sum tar zstd sed awk
+for cmd in curl gzip grep sha256sum tar zstd sed awk; do
+	if ! command -v "$cmd" >/dev/null 2>&1; then
+		echo "$cmd is required!"
+		exit 1
+	fi
+done
 
 if [ $EUID != 0 ]; then
 	echo "Root rights are required!"
@@ -50,7 +47,7 @@ mount_chroot () {
 
 	rm -f "${bootstrap}"/etc/resolv.conf
 	cp /etc/resolv.conf "${bootstrap}"/etc/resolv.conf
-	cp "${settings_file}" "${bootstrap}"/conty_settings.sh
+	cp "${settings_file}" "${bootstrap}"/arxy_settings.sh
 
 	mkdir -p "${bootstrap}"/run/shm
 }
@@ -63,15 +60,11 @@ unmount_chroot () {
 }
 
 run_in_chroot () {
-	if [ -n "${CHROOT_AUR}" ]; then
-		chroot --userspec=aur:aur "${bootstrap}" /usr/bin/env LANG=en_US.UTF-8 TERM=xterm PATH="/bin:/sbin:/usr/bin:/usr/sbin" "$@"
-	else
-		chroot "${bootstrap}" /usr/bin/env LANG=en_US.UTF-8 TERM=xterm PATH="/bin:/sbin:/usr/bin:/usr/sbin" "$@"
-	fi
+	chroot "${bootstrap}" /usr/bin/env LANG=en_US.UTF-8 TERM=xterm PATH="/bin:/sbin:/usr/bin:/usr/sbin" "$@"
 }
 
 install_packages () {
-	source /conty_settings.sh
+	source /arxy_settings.sh
 	echo "Checking if packages are present in the repos, please wait..."
 
 	declare -a bad_pkglist
@@ -91,29 +84,6 @@ install_packages () {
 
 }
 
-install_aur_packages () {
-	cd /home/aur || exit 1
-
-	echo "Checking if packages are present in the AUR, please wait..."
-	for p in ${aur_pkgs}; do
-		if ! paru --clonedir /home/aur -a -G "${p}" &>/dev/null; then
-			bad_aur_pkglist="${bad_aur_pkglist} ${p}"
-		else
-			good_aur_pkglist="${good_aur_pkglist} ${p}"
-		fi
-	done
-
-	if [ -n "${bad_aur_pkglist}" ]; then
-		echo ${bad_aur_pkglist} > /home/aur/bad_aur_pkglist.txt
-	fi
-
-	# shellcheck disable=SC2034 # i es contador de reintentos, deliberadamente sin usar
-	for i in {1..10}; do
-		if paru --noconfirm --sync --removemake --skipreview --useask --clonedir /home/aur --builddir /home/aur -a ${good_aur_pkglist}; then
-			break
-		fi
-	done
-}
 
 generate_pkg_licenses_file () {
 	pacman -Qi | grep -E '^Name|Licenses' |  cut -d ":" -f 2 | paste -d ' ' - - > /pkglicenses.txt
@@ -195,11 +165,6 @@ if [ -f mirrorlist ]; then
 	mv mirrorlist "${bootstrap}"/etc/pacman.d/mirrorlist
 fi
 
-#if [ -n "${DOWNLOAD_PROXY}" ]; then
-#	sed "s,#XferCommand = /usr/bin/curl -L -C - -f -o %o %u,XferCommand = /usr/bin/curl ${proxy[0]} ${proxy[1]} -L -C - -f -o %o %u," "${bootstrap}"/etc/pacman.conf > _
-#	mv -f _ "${bootstrap}"/etc/pacman.conf
-#fi
-
 sed 's/#DisableSandboxSyscalls/#DisableSandboxSyscalls\nDisableSandbox/' "${bootstrap}"/etc/pacman.conf > _
 mv -f _ "${bootstrap}"/etc/pacman.conf
 
@@ -211,34 +176,6 @@ fi
 run_in_chroot pacman-key --init
 run_in_chroot pacman-key --populate archlinux
 
-# Chaotic-AUR repo (opt-out por perfil: arxy usa solo repos oficiales).
-if [ "${ENABLE_CHAOTIC_REPO-1}" = "1" ]; then
-# Add Chaotic-AUR repo
-if ! run_in_chroot pacman-key --recv-key 3056513887B78AEB --keyserver keyserver.ubuntu.com; then
-	chaotic_keyring_extract_dir="${bootstrap}/tmp/chaotic-keyring"
-	mkdir -p "${chaotic_keyring_extract_dir}"
-	curl -L --retry 3 -o "${chaotic_keyring_extract_dir}/chaotic-keyring.pkg.tar.zst" "https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst"
-	tar -xf "${chaotic_keyring_extract_dir}/chaotic-keyring.pkg.tar.zst" -C "${chaotic_keyring_extract_dir}"
-	run_in_chroot pacman-key --add /tmp/chaotic-keyring/usr/share/pacman/keyrings/chaotic.gpg
-	rm -rf "${chaotic_keyring_extract_dir}"
-fi
-
-run_in_chroot pacman-key --lsign-key 3056513887B78AEB
-
-if ! run_in_chroot pacman --noconfirm -U \
-	 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-keyring.pkg.tar.zst' \
-	 'https://cdn-mirror.chaotic.cx/chaotic-aur/chaotic-mirrorlist.pkg.tar.zst'; then
-	echo "Seems like Chaotic-AUR keyring or mirrorlist is currently unavailable"
-	echo "Please try again later"
-	exit 1
-fi
-
-{
-	echo
-	echo "[chaotic-aur]"
-	echo "Include = /etc/pacman.d/chaotic-mirrorlist"
-} >> "${bootstrap}"/etc/pacman.conf
-fi # ENABLE_CHAOTIC_REPO
 
 # Do not install unneeded files (man pages and Nvidia firmwares by
 # default; profiles can extend via PACMAN_NOEXTRACT, '|' as sed delimiter).
@@ -248,84 +185,6 @@ mv -f _ "${bootstrap}"/etc/pacman.conf
 run_in_chroot pacman -Sy archlinux-keyring --noconfirm
 run_in_chroot pacman -Su --noconfirm
 
-if [ -n "$ENABLE_ALHP_REPO" ]; then
-	run_in_chroot pacman --noconfirm --needed -S alhp-keyring alhp-mirrorlist
-	sed "s/#\[multilib\]/#/" "${bootstrap}"/etc/pacman.conf > _
-	mv -f _ "${bootstrap}"/etc/pacman.conf
-	sed "s/\[core\]/\[core-x86-64-v${ALHP_FEATURE_LEVEL}\]\nInclude = \/etc\/pacman.d\/alhp-mirrorlist\n\n\[extra-x86-64-v${ALHP_FEATURE_LEVEL}\]\nInclude = \/etc\/pacman.d\/alhp-mirrorlist\n\n\[core\]/" "${bootstrap}"/etc/pacman.conf > _
-	mv -f _ "${bootstrap}"/etc/pacman.conf
-	sed "s/\[multilib\]/\[multilib-x86-64-v${ALHP_FEATURE_LEVEL}\]\nInclude = \/etc\/pacman.d\/alhp-mirrorlist\n\n\[multilib\]/" "${bootstrap}"/etc/pacman.conf > _
-	mv -f _ "${bootstrap}"/etc/pacman.conf
-	run_in_chroot pacman -Syu --noconfirm
-fi
-
-# Add CachyOS repos when the active profile sets CACHYOS_ARCH
-# (x86-64-v3, x86-64-v4 or znver4; needs a matching CPU, else SIGILL).
-# Only the arch-optimized repos are added, NOT the plain [cachyos] repo,
-# which carries a forked pacman that warns under stock Arch pacman.
-# Sections are inserted BEFORE [core] so optimized packages take
-# precedence over stock Arch ones. Runs before the -Sy/-Su below so the
-# new repos are synced like the rest.
-if [ -n "${CACHYOS_ARCH:-}" ]; then
-	case "${CACHYOS_ARCH}" in
-		x86-64-v3)
-			cachyos_sections="cachyos-v3 cachyos-core-v3 cachyos-extra-v3"
-			cachyos_mirrorlist="cachyos-v3-mirrorlist"
-			;;
-		x86-64-v4)
-			cachyos_sections="cachyos-v4 cachyos-core-v4 cachyos-extra-v4"
-			cachyos_mirrorlist="cachyos-v4-mirrorlist"
-			;;
-		znver4)
-			cachyos_sections="cachyos-znver4 cachyos-core-znver4 cachyos-extra-znver4"
-			cachyos_mirrorlist="cachyos-v4-mirrorlist"
-			;;
-		*)
-			echo "Unknown CACHYOS_ARCH '${CACHYOS_ARCH}' (want x86-64-v3, x86-64-v4 or znver4)"
-			exit 1
-			;;
-	esac
-
-	if ! run_in_chroot pacman-key --recv-key F3B607488DB35A47 --keyserver keyserver.ubuntu.com; then
-		cachyos_keyring_extract_dir="${bootstrap}/tmp/cachyos-keyring"
-		mkdir -p "${cachyos_keyring_extract_dir}"
-		curl -L --retry 3 -o "${cachyos_keyring_extract_dir}/cachyos-keyring.pkg.tar.zst" "https://mirror.cachyos.org/repo/x86_64/cachyos/cachyos-keyring-20240331-1-any.pkg.tar.zst"
-		tar -xf "${cachyos_keyring_extract_dir}/cachyos-keyring.pkg.tar.zst" -C "${cachyos_keyring_extract_dir}"
-		run_in_chroot pacman-key --add /tmp/cachyos-keyring/usr/share/pacman/keyrings/cachyos.gpg
-		rm -rf "${cachyos_keyring_extract_dir}"
-	fi
-
-	run_in_chroot pacman-key --lsign-key F3B607488DB35A47
-
-	# Keyring + mirrorlists. These URLs are versioned and may rot, so a
-	# failure here is not fatal: the key is already trusted above and we
-	# fall back to minimal mirrorlists with direct Server lines.
-	cachyos_mirror_url="https://mirror.cachyos.org/repo/x86_64/cachyos"
-	if ! run_in_chroot pacman --noconfirm -U \
-		 "${cachyos_mirror_url}/cachyos-keyring-20240331-1-any.pkg.tar.zst" \
-		 "${cachyos_mirror_url}/cachyos-v3-mirrorlist-27-1-any.pkg.tar.zst" \
-		 "${cachyos_mirror_url}/cachyos-v4-mirrorlist-27-1-any.pkg.tar.zst"; then
-		echo "CachyOS keyring/mirrorlist packages unavailable, using fallback mirrorlists"
-	fi
-	for ml in cachyos-v3-mirrorlist cachyos-v4-mirrorlist; do
-		if [ ! -s "${bootstrap}/etc/pacman.d/${ml}" ]; then
-			printf '%s\n' 'Server = https://mirror.cachyos.org/repo/$arch/$repo' > "${bootstrap}/etc/pacman.d/${ml}"
-		fi
-	done
-
-	{
-		echo
-		for s in ${cachyos_sections}; do
-			echo "[${s}]"
-			echo "Include = /etc/pacman.d/${cachyos_mirrorlist}"
-			echo
-		done
-	} > "${bootstrap}"/cachyos-repos.conf
-	awk 'BEGIN{done=0} /^\[core\]$/ && !done {while ((getline line < repos) > 0) print line; done=1} {print}' repos="${bootstrap}"/cachyos-repos.conf "${bootstrap}"/etc/pacman.conf > _
-	mv -f _ "${bootstrap}"/etc/pacman.conf
-	rm -f "${bootstrap}"/cachyos-repos.conf
-	run_in_chroot pacman -Syu --noconfirm
-fi
 
 date -u +"%d-%m-%Y %H:%M (DMY UTC)" > "${bootstrap}"/version
 
@@ -367,21 +226,6 @@ if [ -n "${DEBLOATED_MESA_URL:-}" ]; then
 	fi
 fi
 
-if [ "${#AUR_PACKAGES[@]}" -ne 0 ]; then
-	run_in_chroot pacman --noconfirm --needed -S base-devel paru
-	run_in_chroot useradd -m -G wheel aur
-	echo "%wheel ALL=(ALL:ALL) NOPASSWD: ALL" >> "${bootstrap}"/etc/sudoers
-
-	for p in "${AUR_PACKAGES[@]}"; do
-		aur_pkgs="${aur_pkgs} aur/${p}"
-	done
-	export aur_pkgs
-
-	export -f install_aur_packages
-	CHROOT_AUR=1 HOME=/home/aur run_in_chroot bash -c install_aur_packages
-	mv "${bootstrap}"/home/aur/bad_aur_pkglist.txt "${bootstrap}"/opt
-	rm -rf "${bootstrap}"/home/aur
-fi
 
 run_in_chroot locale-gen || { echo "locale-gen FAILED"; unmount_chroot; exit 1; }
 # i18n excluido de AQUI en adelante (no antes: locale-gen necesita los
@@ -413,7 +257,7 @@ rm -f "${bootstrap}"/var/cache/pacman/pkg/*
 
 # Create some empty files and directories
 # This is needed for bubblewrap to be able to bind real files/dirs to them
-# later in the conty-start.sh script
+# later by the arxy runtime
 mkdir "${bootstrap}"/media
 # Empty bind targets: /host = real host root, /data = extra host data dir
 # (arxy bind-mounts them; bwrap --bind requires the dest to exist).
@@ -430,11 +274,3 @@ ln -s /usr/share/fontconfig/conf.avail/10-hinting-full.conf "${bootstrap}"/etc/f
 
 clear
 echo "Done"
-
-if [ -f "${bootstrap}"/opt/bad_aur_pkglist.txt ]; then
-	echo
-	echo "These packages are either not in the AUR or yay failed to download their"
-	echo "PKGBUILDs:"
-	cat "${bootstrap}"/opt/bad_aur_pkglist.txt
-	rm "${bootstrap}"/opt/bad_aur_pkglist.txt
-fi

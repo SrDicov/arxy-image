@@ -28,6 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      - name: Install deps
+        run: pacman -Sy --noconfirm --needed minisign bubblewrap file github-cli git
+
       - name: Build bootstrap (root.x86_64)
         run: |
           chmod +x create-arch-bootstrap.sh create-arxy-image.sh
@@ -43,7 +46,6 @@ jobs:
           MINISIGN_SECRET: ${{ secrets.MINISIGN_SECRET }}
         run: |
           [[ -n "${MINISIGN_SECRET:-}" ]] || { echo "sin MINISIGN_SECRET: salto firma (el publish abortara)"; exit 0; }
-          pacman -Sy --noconfirm --needed minisign
           printf '%s\n' "$MINISIGN_SECRET" > /tmp/arxy.sec
           chmod 600 /tmp/arxy.sec
           minisign -S -s /tmp/arxy.sec -m arxy-rootfs-x86_64.tar.zst \
@@ -60,7 +62,6 @@ jobs:
         # tests/matrix.sh: 33–43 checks con assertions de contenido
         # sobre el tarball recien construido. Si falla, el release no se toca.
         run: |
-          pacman -Sy --noconfirm --needed bubblewrap file
           curl -fsSL https://raw.githubusercontent.com/SrDicov/arxy/v0.6.0/src/arxy -o /usr/local/bin/arxy
           chmod +x /usr/local/bin/arxy
           MATRIX_IMAGE="$PWD/arxy-rootfs-x86_64.tar.zst" MATRIX_WRITE2=1 ./tests/matrix.sh
@@ -69,7 +70,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pacman -Sy --noconfirm --needed github-cli git
           repo="SrDicov/arxy-image"
           tag=latest
           gh release view "$tag" -R "$repo" >/dev/null 2>&1 || \
